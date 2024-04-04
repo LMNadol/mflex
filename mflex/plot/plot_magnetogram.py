@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 import matplotlib.pyplot as plt
 import numpy as np
 from mflex.plot.linetracer.fieldline3D import fieldline3d
@@ -60,10 +58,10 @@ def plot_magnetogram_boundary_3D(
     # Have to have Xgrid first, Ygrid second, as Contourf expects x-axis/ columns first, then y-axis/rows
     ax.set_xlabel("x")
     ax.set_ylabel("y")
-    ax.set_zlabel("z")
-    ax.set_zlim([zmin, zmax])
-    ax.view_init(30, 245)
-    ax.set_box_aspect((xmax, ymax, 1.0))
+    ax.set_zlabel("z")  # type: ignore
+    ax.set_zlim([zmin, zmax])  # type: ignore
+    ax.view_init(30, 245)  # type: ignore
+    ax.set_box_aspect((xmax, ymax, 1.0))  # type: ignore
     plt.show()
 
 
@@ -112,16 +110,16 @@ def plot_fieldlines_grid(
     # Have to have Xgrid first, Ygrid second, as Contourf expects x-axis/ columns first, then y-axis/rows
     ax.set_xlabel("x")
     ax.set_ylabel("y")
-    ax.set_zlabel("z")
-    ax.set_zlim([zmin, zmax])
+    ax.set_zlabel("z")  # type: ignore
+    ax.set_zlim([zmin, zmax])  # type: ignore
 
     if view == "top":
-        ax.view_init(90, -90)
+        ax.view_init(90, -90)  # type: ignore
     if view == "angular":
-        ax.view_init(30, 240, 0)
+        ax.view_init(30, 240, 0)  # type: ignore
     if view == "side":
-        ax.view_init(0, -90)
-    ax.set_box_aspect((xmax, ymax, 2 * zmax))
+        ax.view_init(0, -90)  # type: ignore
+    ax.set_box_aspect((xmax, ymax, 2 * zmax))  # type: ignore
 
     x_0 = 1.0 * 10**-8
     y_0 = 1.0 * 10**-8
@@ -201,7 +199,7 @@ def plot_fieldlines_grid(
         + dt_string
         + ".png"
     )
-    ax.set_zticklabels([])
+    ax.set_zticklabels([])  # type: ignore
     plt.savefig(plotname, dpi=300, transparent=True)
 
     plt.show()
@@ -252,16 +250,16 @@ def plot_fieldlines_issi_analytical(
     # Have to have Xgrid first, Ygrid second, as Contourf expects x-axis/ columns first, then y-axis/rows
     ax.set_xlabel("x")
     ax.set_ylabel("y")
-    ax.set_zlabel("z")
-    ax.set_zlim([zmin, zmax])
+    ax.set_zlabel("z")  # type: ignore
+    ax.set_zlim([zmin, zmax])  # type: ignore
 
     if view == "top":
-        ax.view_init(90, -90)
+        ax.view_init(90, -90)  # type: ignore
     if view == "angular":
-        ax.view_init(30, 240, 0)
+        ax.view_init(30, 240, 0)  # type: ignore
     if view == "side":
-        ax.view_init(0, -90)
-    ax.set_box_aspect((xmax, ymax, zmax))
+        ax.view_init(0, -90)  # type: ignore
+    ax.set_box_aspect((xmax, ymax, zmax))  # type: ignore
 
     x_0 = 1.0 * 10**-8
     y_0 = 1.0 * 10**-8
@@ -336,7 +334,7 @@ def plot_fieldlines_issi_analytical(
         + view
         + ".png"
     )
-    ax.set_zticklabels([])
+    ax.set_zticklabels([])  # type: ignore
     plt.savefig(plotname, dpi=300)
     plt.show()
 
@@ -385,16 +383,16 @@ def plot_fieldlines_soar(
     # Have to have Xgrid first, Ygrid second, as Contourf expects x-axis/ columns first, then y-axis/rows
     ax.set_xlabel("x")
     ax.set_ylabel("y")
-    ax.set_zlabel("z")
-    ax.set_zlim([zmin, zmax])
+    ax.set_zlabel("z")  # type: ignore
+    ax.set_zlim([zmin, zmax])  # type: ignore
 
     if view == "top":
-        ax.view_init(90, -90)
+        ax.view_init(90, -90)  # type: ignore
     if view == "angular":
-        ax.view_init(30, 240, 0)
+        ax.view_init(30, 240, 0)  # type: ignore
     if view == "side":
-        ax.view_init(0, -90)
-    ax.set_box_aspect((xmax, ymax, 4 * zmax))
+        ax.view_init(0, -90)  # type: ignore
+    ax.set_box_aspect((xmax, ymax, 4 * zmax))  # type: ignore
 
     x_0 = 1.0 * 10**-8
     y_0 = 1.0 * 10**-8
@@ -475,7 +473,7 @@ def plot_fieldlines_soar(
         + dt_string
         + ".png"
     )
-    ax.set_zticklabels([])
+    ax.set_zticklabels([])  # type: ignore
     plt.savefig(plotname, dpi=300)
 
     plt.show()
@@ -525,12 +523,12 @@ def plot_fieldlines_polar(
     # Have to have Xgrid first, Ygrid second, as Contourf expects x-axis/ columns first, then y-axis/rows
     ax.set_xlabel("x")
     ax.set_ylabel("y")
-    ax.set_zlabel("z")
+    ax.set_zlabel("z")  # type: ignore
     # ax.set_zlim([zmin, zmax])
-    ax.view_init(0, -90)
+    ax.view_init(0, -90)  # type: ignore
     # ax.view_init(30, -115, 0)
 
-    ax.set_box_aspect((2, 2, 2))
+    ax.set_box_aspect((2, 2, 2))  # type: ignore
 
     nlinesmaxr = 2
     nlinesmaxphi = 5
@@ -656,7 +654,7 @@ def plot_fieldlines_polar(
     """plotname = "/Users/lilli/Desktop/mflex/nw2019_paper/figure3" + name + ".png"
     plt.savefig(plotname, dpi=300)
     """
-    ax.set_zlim([zmin, zmax])
+    ax.set_zlim([zmin, zmax])  # type: ignore
     # ax.view_init(0, -90)
 
     """
@@ -729,10 +727,10 @@ def plot_fieldlines_polar_large(
     # Have to have Xgrid first, Ygrid second, as Contourf expects x-axis/ columns first, then y-axis/rows
     ax.set_xlabel("x")
     ax.set_ylabel("y")
-    ax.set_zlabel("z")
+    ax.set_zlabel("z")  # type: ignore
     # ax.set_zlim([zmin, zmax])
     # ax.view_init(90, -90)
-    ax.view_init(30, -115, 0)
+    ax.view_init(30, -115, 0)  # type: ignore
 
     nlinesmaxr = 2
     nlinesmaxphi = 5
@@ -898,9 +896,9 @@ def plot_fieldlines_polar_large(
     """plotname = "/Users/lilli/Desktop/mflex/nw2019_paper/figure3" + name + ".png"
     plt.savefig(plotname, dpi=300)
     """
-    ax.set_zlim([zmin, zmax])
-    ax.set_box_aspect((10, 10, 3))
-    ax.view_init(0, -90)
+    ax.set_zlim([zmin, zmax])  # type: ignore
+    ax.set_box_aspect((10, 10, 3))  # type: ignore
+    ax.view_init(0, -90)  # type: ignore
 
     """
     plotname = "/Users/lilli/Desktop/mflex/nw2019_paper/figure4" + name + ".png"
@@ -973,12 +971,12 @@ def plot_fieldlines_polar_thesis(
     # Have to have Xgrid first, Ygrid second, as Contourf expects x-axis/ columns first, then y-axis/rows
     ax.set_xlabel("x")
     ax.set_ylabel("y")
-    ax.set_zlabel("z")
+    ax.set_zlabel("z")  # type: ignore
     # ax.set_zlim([zmin, zmax])
     # ax.view_init(0, -90)
-    ax.view_init(30, -115, 0)
+    ax.view_init(30, -115, 0)  # type: ignore
 
-    ax.set_box_aspect((2, 2, 2))
+    ax.set_box_aspect((2, 2, 2))  # type: ignore
 
     nlinesmaxr = 2
     nlinesmaxphi = 5
@@ -1101,18 +1099,18 @@ def plot_fieldlines_polar_thesis(
                     zorder=4000,
                 )
 
-    ax.set_zlim([zmin, zmax])
+    ax.set_zlim([zmin, zmax])  # type: ignore
     # ax.view_init(90, -90)
-    plotname = (
-        "/Users/lilli/Desktop/Thesis_vonNeu/"
-        + name
-        + "_"
-        + str(a)
-        + "_"
-        + str(alpha)
-        + ".png"
-    )
-    plt.savefig(plotname, dpi=300)
+    # plotname = (
+    #     "/Users/lilli/Desktop/Thesis_vonNeu/"
+    #     + name
+    #     + "_"
+    #     + str(a)
+    #     + "_"
+    #     + str(alpha)
+    #     + ".png"
+    # )
+    # plt.savefig(plotname, dpi=300)
 
     """
     plotname = "/Users/lilli/Desktop/mflex/nw2019_paper/figure4" + name + ".png"
