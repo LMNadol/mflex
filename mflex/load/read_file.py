@@ -37,9 +37,9 @@ def read_issi_rmhd(path: str, L: np.float64) -> Data3D:
     pixelsize_x_Mm = 192.0 * 10**-3
     pixelsize_z_Mm = 64.0 * 10**-3
 
-    xmin = 0.0  # Minimum value of x in data length scale, not in Mm
-    ymin = 0.0  # Minimum value of y in data length scale, not in Mm
-    zmin = 0.0  # Minimum value of z in data length scale, not in Mm
+    xmin = np.float64(0.0)  # Minimum value of x in data length scale, not in Mm
+    ymin = np.float64(0.0)  # Minimum value of y in data length scale, not in Mm
+    zmin = np.float64(0.0)  # Minimum value of z in data length scale, not in Mm
 
     xmax_Mm = nresol_x * pixelsize_x_Mm  # xmax in Mm
     ymax_Mm = nresol_y * pixelsize_y_Mm
@@ -117,9 +117,9 @@ def read_issi_analytical(path: str, L: np.float64) -> Data3D:
     pixelsize_x_Mm = 40.0 * 10**-3
     pixelsize_y_Mm = 40.0 * 10**-3
 
-    xmin = 0.0  # Minimum value of x in data length scale, not in Mm
-    ymin = 0.0  # Minimum value of y in data length scale, not in Mm
-    zmin = 0.0  # Minimum value of z in data length scale, not in Mm
+    xmin = np.float64(0.0)  # Minimum value of x in data length scale, not in Mm
+    ymin = np.float64(0.0)  # Minimum value of y in data length scale, not in Mm
+    zmin = np.float64(0.0)  # Minimum value of z in data length scale, not in Mm
 
     xmax_Mm = nresol_x * pixelsize_x_Mm
     ymax_Mm = nresol_y * pixelsize_y_Mm
@@ -177,8 +177,8 @@ def read_fits_soar(path: str, L: np.float64, header: bool = False) -> DataBz:
     with open(path) as data:
         # data.info()
         image = getdata(path, ext=False)
-        x_len = image.shape[0]
-        y_len = image.shape[1]
+        # x_len = image.shape[0]
+        # y_len = image.shape[1]
         """plot_magnetogram_boundary(image, x_len, y_len)
         x_start = int(input("First pixel x axis: "))
         x_last = int(input("Last pixel x axis: "))
@@ -188,7 +188,7 @@ def read_fits_soar(path: str, L: np.float64, header: bool = False) -> DataBz:
         x_last = 1200
         y_start = 500
         y_last = 1000
-        cut_image = image[y_start:y_last, x_start:x_last]
+        cut_image = image[y_start:y_last, x_start:x_last]  # type: ignore
         # plot_magnetogram_boundary(cut_image, x_last - x_start, y_last - y_start)
         # if header == True:
         #    with open(
@@ -198,7 +198,8 @@ def read_fits_soar(path: str, L: np.float64, header: bool = False) -> DataBz:
         #        for d in data:
         #            f.write(repr(d.header))
         #    print("File header has been printed to Desktop/SOAR/obs")
-        hdr = data[0].header  # the primary HDU header
+        hdr = data[0].header  # type: ignore
+        # the primary HDU header
         dist = hdr["DSUN_OBS"]
         pixelsize_x_unit = hdr["CUNIT1"]
         pixelsize_y_unit = hdr["CUNIT2"]
@@ -226,9 +227,9 @@ def read_fits_soar(path: str, L: np.float64, header: bool = False) -> DataBz:
 
     zmax_Mm = 20000.0 * 10**-3
 
-    xmin = 0.0  # Minimum value of x in data length scale, not in Mm
-    ymin = 0.0  # Minimum value of y in data length scale, not in Mm
-    zmin = 0.0  # Minimum value of z in data length scale, not in Mm
+    xmin = np.float64(0.0)  # Minimum value of x in data length scale, not in Mm
+    ymin = np.float64(0.0)  # Minimum value of y in data length scale, not in Mm
+    zmin = np.float64(0.0)  # Minimum value of z in data length scale, not in Mm
 
     nresol_z = int(np.floor(zmax_Mm / pixelsize_z_Mm))
 

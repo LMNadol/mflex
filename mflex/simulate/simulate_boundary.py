@@ -67,7 +67,12 @@ def dipole2(x: np.float64, y: np.float64) -> np.float64:
     )
 
 
-def dipole_large(x: np.float64, y: np.float64) -> np.float64:
+def dipole_large(
+    x: np.float64,
+    y: np.float64,
+    default_x: np.float64 = np.float64(5.0),
+    default_y: np.float64 = np.float64(5.0),
+) -> np.float64:
     """
     Returns value of Dipole-VonMises distribution at given x and y
     inspired by Neukirch and Wiegelmann (2019).
@@ -77,9 +82,9 @@ def dipole_large(x: np.float64, y: np.float64) -> np.float64:
         if (y <= 8.0) and (y >= 2.0):
             return dipole2(x, y)
         else:
-            return dipole2(5, 5)
+            return dipole2(default_x, default_y)
     else:
-        return dipole2(5, 5)
+        return dipole2(default_x, default_y)
 
 
 def non_periodic(x: np.float64, y: np.float64) -> np.float64:
