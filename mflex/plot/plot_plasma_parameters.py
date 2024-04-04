@@ -52,7 +52,7 @@ def plot_deltaparam(
             + bfield[iy, ix, iz, 2] * dbzpartial[iy, ix, iz, 2]
         )
         delta_p[iz] = deltapres(z, z0, deltaz, a, b, bz)
-        delta_d[iz] = deltaden(z, z0, deltaz, a, b, bz, bzdotgradbz, g)
+        delta_d[iz] = deltaden(z, z0, deltaz, a, b, bz, bzdotgradbz)
 
     plt.plot(z_arr, delta_p, label="Delta pressure", linewidth=0.5)
     plt.plot(z_arr, delta_d, label="Delta density", linewidth=0.5)

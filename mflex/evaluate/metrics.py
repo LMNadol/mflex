@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+from typing import Tuple
 import numpy as np
 import math
 from mflex.plot.linetracer.fieldline3D import fieldline3d
@@ -262,7 +261,7 @@ def pearson_corr_coeff(
     nresol_z: int,
     zmin: np.float64,
     zmax: np.float64,
-) -> np.ndarray[np.float64, np.dtype[np.float64]]:
+) -> Tuple[np.ndarray[np.float64, np.dtype[np.float64]], ...]:
 
     z_arr = np.arange(nresol_z) * (zmax - zmin) / (nresol_z - 1) + zmin
 

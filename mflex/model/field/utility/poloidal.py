@@ -1,68 +1,65 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 import numpy as np
 from scipy.special import jv
 from scipy.special import gamma, hyp2f1
 from numba import njit
 
-
 @njit
 def phi(
     z: np.float64,
-    p: np.float64,
-    q: np.float64,
+    p: np.ndarray[np.float64, np.dtype[np.float64]],
+    q: np.ndarray[np.float64, np.dtype[np.float64]],
     z0: np.float64,
     deltaz: np.float64,
-) -> np.float64:
+):
     """
     Returns poloidal component of magnetic field vector according
     to asymptotic approximatio of Neukirch and Wiegelmann (2019).
     """
 
-    rplus = p / deltaz
-    rminus = q / deltaz
+    rplus = np.divide(p, deltaz)
+    rminus = np.divide(q, deltaz)
 
-    r = rminus / rplus
-    d = np.cosh(2.0 * rplus * z0) + r * np.sinh(2.0 * rplus * z0)
+    r = np.divide(rminus, rplus)
+    
+    d = np.cosh(2.0 * rplus * z0) + np.multiply(r, np.sinh(2.0 * rplus * z0))
 
     if z - z0 < 0.0:
-        return (
-            np.cosh(2.0 * rplus * (z0 - z)) + r * np.sinh(2.0 * rplus * (z0 - z))
-        ) / d
+        return (np.divide(
+            np.cosh(2.0 * rplus * (z0 - z)) + np.multiply(r, np.sinh(2.0 * rplus * (z0 - z)))
+        , d))
 
     else:
-        return np.exp(-2.0 * rminus * (z - z0)) / d
+        return np.divide(np.exp(-2.0 * rminus * (z - z0))  ,d)
 
 
 @njit
 def dphidz(
     z: np.float64,
-    p: np.float64,
-    q: np.float64,
+    p: np.ndarray[np.float64, np.dtype[np.float64]],
+    q: np.ndarray[np.float64, np.dtype[np.float64]],
     z0: np.float64,
     deltaz: np.float64,
-) -> np.float64:
+) -> np.ndarray[np.float64, np.dtype[np.float64]]:
     """
     Returns z derivatie of poloidal component of magnetic field vector according
     to asymptotic approximation of Neukirch and Wiegelmann (2019).
     """
 
-    rplus = p / deltaz
-    rminus = q / deltaz
+    rplus = np.divide(p, deltaz)
+    rminus = np.divide(q, deltaz)
 
-    r = rminus / rplus
-    d = np.cosh(2.0 * rplus * z0) + r * np.sinh(2.0 * rplus * z0)
+    r = np.divide(rminus, rplus)
+    d = np.cosh(2.0 * rplus * z0) + np.multiply(r, np.sinh(2.0 * rplus * z0))
 
     if z - z0 < 0.0:
         return (
-            -2.0
-            * rplus
-            * (np.sinh(2.0 * rplus * (z0 - z)) + r * np.cosh(2.0 * rplus * (z0 - z)))
-            / d
+            np.divide(-2.0
+            * np.multiply(rplus, (np.sinh(2.0 * rplus * (z0 - z)) + np.multiply(r, np.cosh(2.0 * rplus * (z0 - z))))),
+            d)
         )
 
     else:
-        return -2.0 * rminus * np.exp(-2.0 * rminus * (z - z0)) / d
+        return np.divide(-2.0 * np.multiply(rminus, np.exp(-2.0 * rminus * (z - z0))), d)
 
 
 # @njit

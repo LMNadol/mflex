@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+
 import numpy as np
 from mflex.model.field.utility.seehafer import mirror_magnetogram
 from mflex.model.field.utility.fft import fft_coeff_seehafer
@@ -223,23 +222,12 @@ def get_phi_dphi(
     if solution == "Asym":
         assert z0 is not None and deltaz is not None
 
-        for iy in range(0, nf_max):
-            for ix in range(0, nf_max):
-                q = q_arr[iy, ix]
-                p = p_arr[iy, ix]
-
-                vec_phi = np.vectorize(phi)
-                vec_dphidz = np.vectorize(dphidz)
-
-                phi_arr[iy, ix, :] = vec_phi(z_arr, p, q, z0, deltaz)
-                dphidz_arr[iy, ix, :] = vec_dphidz(z_arr, p, q, z0, deltaz)
-
-                # for iz in range(0, nresol_z):
-                #     z = z_arr[iz]
-                #     phi_arr[iy, ix, iz] = phi(z, p, q, z0, deltaz)
-                #     dphidz_arr[iy, ix, iz] = dphidz(z, p, q, z0, deltaz)
-
+        for iz, z in enumerate(z_arr):
+           phi_arr[:, :, iz] = phi(z, p_arr, q_arr, z0, deltaz)
+           dphidz_arr[:, :, iz] = dphidz(z, p_arr, q_arr, z0, deltaz)
+            
     elif solution == "Hypergeo":
+        # Repeat changes for this branch
 
         assert z0 is not None and deltaz is not None
 
@@ -788,6 +776,9 @@ def magfield3d(
         np.pi / length_scale_y_norm
     ) ** 2
 
+    p_arr = np.zeros_like(k2_arr)
+    q_arr = np.zeros_like(k2_arr)
+    
     if ssystem[0]:
         ratiodzls = deltaz
         alpha = alpha * length_scale / L
