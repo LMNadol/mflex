@@ -8,7 +8,11 @@ from numba import njit
 
 @njit
 def phi(
-    z: np.float64, p: np.float64, q: np.float64, z0: np.float64, deltaz: np.float64
+    z: np.float64,
+    p: np.float64,
+    q: np.float64,
+    z0: np.float64,
+    deltaz: np.float64,
 ) -> np.float64:
     """
     Returns poloidal component of magnetic field vector according
@@ -32,7 +36,11 @@ def phi(
 
 @njit
 def dphidz(
-    z: np.float64, p: np.float64, q: np.float64, z0: np.float64, deltaz: np.float64
+    z: np.float64,
+    p: np.float64,
+    q: np.float64,
+    z0: np.float64,
+    deltaz: np.float64,
 ) -> np.float64:
     """
     Returns z derivatie of poloidal component of magnetic field vector according

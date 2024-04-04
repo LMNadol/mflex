@@ -14,6 +14,7 @@ from mflex.model.field.utility.poloidal import (
 from mflex.plot.plot_magnetogram import plot_magnetogram_boundary
 from numba import njit
 
+from typing import Tuple
 
 """
 # Old version of magnetic field code NOT including normalising length scale L 
@@ -209,33 +210,39 @@ def get_phi_dphi(
     z_arr: np.ndarray[np.float64, np.dtype[np.float64]],
     q_arr: np.ndarray[np.float64, np.dtype[np.float64]],
     p_arr: np.ndarray[np.float64, np.dtype[np.float64]],
-    nf_max: np.float64,
-    nresol_z: np.float64,
-    z0: np.float64 = None,
-    deltaz: np.float64 = None,
-    kappa: np.float64 = None,
+    nf_max: int,
+    nresol_z: int,
+    z0: np.float64 | None = None,
+    deltaz: np.float64 | None = None,
+    kappa: np.float64 | None = None,
     solution: str = "Asym",
 ):
     phi_arr = np.zeros((nf_max, nf_max, nresol_z))
     dphidz_arr = np.zeros((nf_max, nf_max, nresol_z))
 
-    if (solution == "Asym" or solution == "Hypergeo") and (
-        z0 == None or deltaz == None
-    ):
-        raise ValueError("Not all necessary parameters prescribed")
-    if solution == "Exp" and kappa == None:
-        raise ValueError("Not all necessary parameters prescribed")
-
     if solution == "Asym":
+        assert z0 is not None and deltaz is not None
+
         for iy in range(0, nf_max):
             for ix in range(0, nf_max):
                 q = q_arr[iy, ix]
                 p = p_arr[iy, ix]
-                for iz in range(0, nresol_z):
-                    z = z_arr[iz]
-                    phi_arr[iy, ix, iz] = phi(z, p, q, z0, deltaz)
-                    dphidz_arr[iy, ix, iz] = dphidz(z, p, q, z0, deltaz)
+
+                vec_phi = np.vectorize(phi)
+                vec_dphidz = np.vectorize(dphidz)
+
+                phi_arr[iy, ix, :] = vec_phi(z_arr, p, q, z0, deltaz)
+                dphidz_arr[iy, ix, :] = vec_dphidz(z_arr, p, q, z0, deltaz)
+
+                # for iz in range(0, nresol_z):
+                #     z = z_arr[iz]
+                #     phi_arr[iy, ix, iz] = phi(z, p, q, z0, deltaz)
+                #     dphidz_arr[iy, ix, iz] = dphidz(z, p, q, z0, deltaz)
+
     elif solution == "Hypergeo":
+
+        assert z0 is not None and deltaz is not None
+
         for iy in range(0, int(nf_max)):
             for ix in range(0, int(nf_max)):
                 q = q_arr[iy, ix]
@@ -244,7 +251,10 @@ def get_phi_dphi(
                     z = z_arr[iz]
                     phi_arr[iy, ix, iz] = phi_hypgeo(z, p, q, z0, deltaz)
                     dphidz_arr[iy, ix, iz] = dphidz_hypgeo(z, p, q, z0, deltaz)
+
     elif solution == "Exp":
+
+        assert kappa is not None
         for iy in range(0, int(nf_max)):
             for ix in range(0, int(nf_max)):
                 q = q_arr[iy, ix]
@@ -262,16 +272,16 @@ def get_phi_dphi_sys(
     z_arr: np.ndarray[np.float64, np.dtype[np.float64]],
     q_arr: np.ndarray[np.float64, np.dtype[np.float64]],
     p_arr: np.ndarray[np.float64, np.dtype[np.float64]],
-    ssystem,
+    ssystem: list[bool],
     nf_max: int,
-    nresol_z: np.float64,
+    nresol_z: int,
     deltaz: np.float64,
-    z0: np.float64 = None,
+    z0: np.float64,
 ):
     phi_arr = np.zeros((nf_max, nf_max, nresol_z))
     dphidz_arr = np.zeros((nf_max, nf_max, nresol_z))
 
-    if ssystem[0] == True:
+    if ssystem[0]:
         for iy in range(0, nf_max):
             for ix in range(0, nf_max):
                 q = q_arr[iy, ix]
@@ -280,7 +290,8 @@ def get_phi_dphi_sys(
                     z = z_arr[iz]
                     phi_arr[iy, ix, iz] = phi(z, p, q, z0, deltaz)
                     dphidz_arr[iy, ix, iz] = dphidz(z, p, q, z0, deltaz)
-    elif ssystem[1] == True:
+
+    elif ssystem[1]:
         for iy in range(0, int(nf_max)):
             for ix in range(0, int(nf_max)):
                 q = q_arr[iy, ix]
@@ -289,7 +300,7 @@ def get_phi_dphi_sys(
                     z = z_arr[iz]
                     phi_arr[iy, ix, iz] = phi_hypgeo(z, p, q, z0, deltaz)
                     dphidz_arr[iy, ix, iz] = dphidz_hypgeo(z, p, q, z0, deltaz)
-    elif ssystem[2] == True:
+    elif ssystem[2]:
         for iy in range(0, int(nf_max)):
             for ix in range(0, int(nf_max)):
                 q = q_arr[iy, ix]
@@ -323,7 +334,7 @@ def magnetic_field(
     pixelsize_y: np.float64,
     nf_max: int,
     L: np.float64,
-) -> np.ndarray[np.float64, np.dtype[np.float64]]:
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Given the Seehafer-mirrored photospheric magnetic field data_bz,
     returns 3D magnetic field vector [By, Bx, Bz] calculated from
@@ -334,7 +345,7 @@ def magnetic_field(
         data_bz, xmin, xmax, ymin, ymax, nresol_x, nresol_y
     )
 
-    length_scale = 2.0 * L  # Normalising length scale for Seehafer
+    length_scale = float(2.0 * L)  # Normalising length scale for Seehafer
 
     length_scale_x = 2.0 * nresol_x * pixelsize_x * L
     length_scale_y = 2.0 * nresol_y * pixelsize_y * L
@@ -361,7 +372,7 @@ def magnetic_field(
 
     ratiodzls = deltaz  # Normalised deltaz
 
-    alpha = alpha * length_scale / L
+    alpha = float(alpha * length_scale / L)
 
     # alpha_issi / L_issi = alpha_lilli / L_lilli,See = alpha_lilli / (2*L_lilli)
     # means that we have alpha_lilli = 2* alpha_issi * L_lilli / L_issi
@@ -391,7 +402,14 @@ def magnetic_field(
     )
 
     phi_arr, dphidz_arr = get_phi_dphi(
-        z_arr, q_arr, p_arr, nf_max, nresol_z, z0=z0, deltaz=deltaz, solution="Asym"
+        z_arr,
+        q_arr,
+        p_arr,
+        nf_max,
+        nresol_z,
+        z0=z0,
+        deltaz=deltaz,
+        solution="Asym",
     )
 
     b_arr = np.zeros((2 * nresol_y, 2 * nresol_x, nresol_z, 3))
@@ -467,7 +485,7 @@ def magnetic_field_low(
     pixelsize_y: np.float64,
     nf_max: int,
     L: np.float64,
-) -> np.ndarray[np.float64, np.dtype[np.float64]]:
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Given the Seehafer-mirrored photospheric magnetic field data_bz,
     returns 3D magnetic field vector [By, Bx, Bz] calculated from
@@ -599,7 +617,7 @@ def magnetic_field_hypergeo(
     pixelsize_y: np.float64,
     nf_max: int,
     L: np.float64,
-) -> np.ndarray[np.float64, np.dtype[np.float64]]:
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Given the Seehafer-mirrored photospheric magnetic field data_bz,
     returns 3D magnetic field vector [By, Bx, Bz] calculated from
@@ -628,7 +646,7 @@ def magnetic_field_hypergeo(
 
     ratiodzls = deltaz  # Normalised deltaz
 
-    alpha = alpha * length_scale / L  # 2*alpha for Seehafer
+    alpha = float(alpha * length_scale / L)  # 2*alpha for Seehafer
 
     # kx, ky arrays, coefficients for x and y in Fourier series
 
@@ -736,14 +754,11 @@ def magfield3d(
     solution="Asymp",
 ):
     # create array for solution
-    ssystem = np.array(
-        [
-            True if solution == "Asymp" else False,
-            True if solution == "Hypergeo" else False,
-            True if solution == "Exp" else False,
-        ],
-        dtype=np.bool_,
-    )
+    ssystem = [
+        solution == "Asymp",
+        solution == "Hypergeo",
+        solution == "Exp",
+    ]
 
     length_scale = 2.0 * L  # Normalising length scale for Seehafer
 
@@ -773,17 +788,17 @@ def magfield3d(
         np.pi / length_scale_y_norm
     ) ** 2
 
-    if ssystem[0] == True:
+    if ssystem[0]:
         ratiodzls = deltaz
         alpha = alpha * length_scale / L
         p_arr = 0.5 * ratiodzls * np.sqrt(k2_arr * (1.0 - a - a * b) - alpha**2)
         q_arr = 0.5 * ratiodzls * np.sqrt(k2_arr * (1.0 - a + a * b) - alpha**2)
-    elif ssystem[1] == True:
+    elif ssystem[1]:
         ratiodzls = deltaz
         alpha = alpha * length_scale / L
         p_arr = 0.5 * ratiodzls * np.sqrt(k2_arr * (1.0 - a - a * b) - alpha**2)
         q_arr = 0.5 * ratiodzls * np.sqrt(k2_arr * (1.0 - a + a * b) - alpha**2)
-    elif ssystem[2] == True:
+    elif ssystem[2]:
         p_arr = 2.0 / deltaz * np.sqrt(k2_arr - alpha**2)
         q_arr = 2.0 / deltaz * np.sqrt(k2_arr * a)
 
