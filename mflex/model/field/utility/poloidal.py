@@ -3,6 +3,7 @@ from scipy.special import jv
 from scipy.special import gamma, hyp2f1
 from numba import njit
 
+
 @njit
 def phi(
     z: np.float64,
@@ -20,16 +21,18 @@ def phi(
     rminus = np.divide(q, deltaz)
 
     r = np.divide(rminus, rplus)
-    
+
     d = np.cosh(2.0 * rplus * z0) + np.multiply(r, np.sinh(2.0 * rplus * z0))
 
     if z - z0 < 0.0:
-        return (np.divide(
-            np.cosh(2.0 * rplus * (z0 - z)) + np.multiply(r, np.sinh(2.0 * rplus * (z0 - z)))
-        , d))
+        return np.divide(
+            np.cosh(2.0 * rplus * (z0 - z))
+            + np.multiply(r, np.sinh(2.0 * rplus * (z0 - z))),
+            d,
+        )
 
     else:
-        return np.divide(np.exp(-2.0 * rminus * (z - z0))  ,d)
+        return np.divide(np.exp(-2.0 * rminus * (z - z0)), d)
 
 
 @njit
@@ -52,14 +55,22 @@ def dphidz(
     d = np.cosh(2.0 * rplus * z0) + np.multiply(r, np.sinh(2.0 * rplus * z0))
 
     if z - z0 < 0.0:
-        return (
-            np.divide(-2.0
-            * np.multiply(rplus, (np.sinh(2.0 * rplus * (z0 - z)) + np.multiply(r, np.cosh(2.0 * rplus * (z0 - z))))),
-            d)
+        return np.divide(
+            -2.0
+            * np.multiply(
+                rplus,
+                (
+                    np.sinh(2.0 * rplus * (z0 - z))
+                    + np.multiply(r, np.cosh(2.0 * rplus * (z0 - z)))
+                ),
+            ),
+            d,
         )
 
     else:
-        return np.divide(-2.0 * np.multiply(rminus, np.exp(-2.0 * rminus * (z - z0))), d)
+        return np.divide(
+            -2.0 * np.multiply(rminus, np.exp(-2.0 * rminus * (z - z0))), d
+        )
 
 
 # @njit
