@@ -67,23 +67,13 @@ def plot_magnetogram_boundary_3D(
 
 def plot_fieldlines_grid(
     data_b: np.ndarray[np.float64, np.dtype[np.float64]],
-    h1: float,
-    hmin: float,
-    hmax: float,
-    eps: float,
-    nresol_x: int,
-    nresol_y: int,
-    nresol_z: int,
+    L: np.float64,
     xmin: np.float64,
     xmax: np.float64,
     ymin: np.float64,
     ymax: np.float64,
     zmin: np.float64,
     zmax: np.float64,
-    a: float,
-    b: float,
-    alpha: float,
-    nf_max: float,
     stepsize: float = 0.1,
     view: str = "top",
 ):
@@ -91,18 +81,28 @@ def plot_fieldlines_grid(
     Returns 3D plot of photospheric magnetic field including field line extrapolation.
     """
 
+    h1 = L / 100.0  # Initial step length for fieldline3D
+    eps = 1.0e-8
+    # Tolerance to which we require point on field line known for fieldline3D
+    hmin = 0.0  # Minimum step length for fieldline3D
+    hmax = L  # Maximum step length for fieldline3D
+
+    nresol_x = int(data_b.shape[1])
+    nresol_y = int(data_b.shape[0])
+    nresol_z = int(data_b.shape[2])
+
     data_bz = data_b[:, :, 0, 2]
-    x_arr = np.arange(2 * nresol_x) * (xmax - xmin) / (2 * nresol_x - 1) + xmin
-    y_arr = np.arange(2 * nresol_y) * (ymax - ymin) / (2 * nresol_y - 1) + ymin
+    x_arr = np.arange(nresol_x) * (xmax - xmin) / (nresol_x - 1) + xmin
+    y_arr = np.arange(nresol_y) * (ymax - ymin) / (nresol_y - 1) + ymin
     z_arr = np.arange(nresol_z) * (zmax - zmin) / (nresol_z - 1) + zmin
     x_grid, y_grid = np.meshgrid(x_arr, y_arr)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
     ax.contourf(
-        x_grid[nresol_y : 2 * nresol_y, nresol_x : 2 * nresol_x],
-        y_grid[nresol_y : 2 * nresol_y, nresol_x : 2 * nresol_x],
-        data_bz[nresol_y : 2 * nresol_y, nresol_x : 2 * nresol_x],
+        x_grid[int(nresol_y / 2) : nresol_y, int(nresol_x / 2) : nresol_x],
+        y_grid[int(nresol_y / 2) : nresol_y, int(nresol_x / 2) : nresol_x],
+        data_bz[int(nresol_y / 2) : nresol_y, int(nresol_x / 2) : nresol_x],
         1000,
         cmap="gist_gray",
         offset=0.0,
@@ -119,7 +119,7 @@ def plot_fieldlines_grid(
         ax.view_init(30, 240, 0)  # type: ignore
     if view == "side":
         ax.view_init(0, -90)  # type: ignore
-    ax.set_box_aspect((xmax, ymax, 2 * zmax))  # type: ignore
+    ax.set_box_aspect((xmax, ymax, zmax))  # type: ignore
 
     x_0 = 1.0 * 10**-8
     y_0 = 1.0 * 10**-8
@@ -178,31 +178,12 @@ def plot_fieldlines_grid(
                 fieldline_y,
                 fieldline_x,
                 fieldline_z,
-                color="yellow",
+                color="magenta",
                 linewidth=0.25,
                 zorder=4000,
             )
 
-    current_time = datetime.now()
-    dt_string = current_time.strftime("%d-%m-%Y_%H-%M-%S")
-
-    plotname = (
-        "/Users/lilli/Desktop/Thesis_vonNeu/solo_L2_phi-hrt-blos_20220307T000609_V01_"
-        + str(a)
-        + "_"
-        + str(b)
-        + "_"
-        + str(alpha)
-        + "_"
-        + str(nf_max)
-        + "_"
-        + dt_string
-        + ".png"
-    )
-    ax.set_zticklabels([])  # type: ignore
-    plt.savefig(plotname, dpi=300, transparent=True)
-
-    plt.show()
+    return fig
 
 
 def plot_fieldlines_issi_analytical(

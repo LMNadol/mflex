@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 from typing import Tuple, Dict
 import scipy
 import numpy as np
@@ -17,13 +15,10 @@ def read_issi_rmhd(path: str, L: np.float64) -> Data3D:
     data = scipy.io.readsav(path, python_dict=True, verbose=True)
 
     data_bz = data["b2dz"]
-    # [0:nresol_y,0:nresol_x]
     # Y-axis size first as this corresponds to number of rows, then X-Axis size corresponding t number of columns
     data_bx = data["b2dx"]
-    # [0:nresol_y,0:nresol_x]
     # Y-axis size first as this corresponds to number of rows, then X-Axis size corresponding t number of columns
     data_by = data["b2dy"]
-    # [0:nresol_y,0:nresol_x]
     # Y-axis size first as this corresponds to number of rows, then X-Axis size corresponding t number of columns
 
     print(data["info_unit"])

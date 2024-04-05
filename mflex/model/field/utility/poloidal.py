@@ -1,6 +1,5 @@
 import numpy as np
-from scipy.special import jv
-from scipy.special import gamma, hyp2f1
+from scipy.special import jv, gamma, hyp2f1
 from numba import njit
 
 
@@ -17,22 +16,21 @@ def phi(
     to asymptotic approximatio of Neukirch and Wiegelmann (2019).
     """
 
-    rplus = np.divide(p, deltaz)
-    rminus = np.divide(q, deltaz)
+    rplus = p / deltaz
+    rminus = q / deltaz
 
-    r = np.divide(rminus, rplus)
+    r = rminus / rplus
 
     d = np.cosh(2.0 * rplus * z0) + np.multiply(r, np.sinh(2.0 * rplus * z0))
 
     if z - z0 < 0.0:
-        return np.divide(
+        return (
             np.cosh(2.0 * rplus * (z0 - z))
-            + np.multiply(r, np.sinh(2.0 * rplus * (z0 - z))),
-            d,
-        )
+            + np.multiply(r, np.sinh(2.0 * rplus * (z0 - z)))
+        ) / d
 
     else:
-        return np.divide(np.exp(-2.0 * rminus * (z - z0)), d)
+        return np.exp(-2.0 * rminus * (z - z0)) / d
 
 
 @njit
@@ -48,14 +46,14 @@ def dphidz(
     to asymptotic approximation of Neukirch and Wiegelmann (2019).
     """
 
-    rplus = np.divide(p, deltaz)
-    rminus = np.divide(q, deltaz)
+    rplus = p / deltaz
+    rminus = q / deltaz
 
-    r = np.divide(rminus, rplus)
+    r = rminus / rplus
     d = np.cosh(2.0 * rplus * z0) + np.multiply(r, np.sinh(2.0 * rplus * z0))
 
     if z - z0 < 0.0:
-        return np.divide(
+        return (
             -2.0
             * np.multiply(
                 rplus,
@@ -63,14 +61,12 @@ def dphidz(
                     np.sinh(2.0 * rplus * (z0 - z))
                     + np.multiply(r, np.cosh(2.0 * rplus * (z0 - z)))
                 ),
-            ),
-            d,
+            )
+            / d
         )
 
     else:
-        return np.divide(
-            -2.0 * np.multiply(rminus, np.exp(-2.0 * rminus * (z - z0))), d
-        )
+        return -2.0 * np.multiply(rminus, np.exp(-2.0 * rminus * (z - z0))) / d
 
 
 # @njit
@@ -84,7 +80,7 @@ def phi_low(
     return jv(p, q * np.exp(-z * kappa / 2.0)) / jv(p, q)
 
 
-# 0@njit
+# @njit
 def dphidz_low(
     z: np.float64, p: np.float64, q: np.float64, kappa: np.float64
 ) -> np.float64:
@@ -105,7 +101,14 @@ def dphidz_low(
 
 
 # @njit
-def phi_hypgeo(z, p, q, z0, deltaz):
+def phi_hypgeo(
+    z: np.float64,
+    p: np.ndarray[np.float64, np.dtype[np.float64]],
+    q: np.ndarray[np.float64, np.dtype[np.float64]],
+    z0: np.float64,
+    deltaz: np.float64,
+):
+
     w = (z - z0) / deltaz
     eta_d = 1.0 / (1.0 + np.exp(2.0 * w))
 
@@ -159,7 +162,13 @@ def phi_hypgeo(z, p, q, z0, deltaz):
 
 
 # @njit
-def dphidz_hypgeo(z, p, q, z0, deltaz):
+def dphidz_hypgeo(
+    z: np.float64,
+    p: np.ndarray[np.float64, np.dtype[np.float64]],
+    q: np.ndarray[np.float64, np.dtype[np.float64]],
+    z0: np.float64,
+    deltaz: np.float64,
+):
     w = (z - z0) / deltaz
     eta_d = 1.0 / (1.0 + np.exp(2.0 * w))
 

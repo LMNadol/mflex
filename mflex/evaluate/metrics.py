@@ -100,13 +100,22 @@ def field_div_metric(
     """
     Returns Field Line Divergence metric of B : B_ref and b : B_rec.
     xmin, ymin, ymax as when using plot_fieldline_grid.
+
+    Tracing field lines from footpoints on a grid on the bottom boundary in both reference model
+    and reconstruction. If both field lines end again on the bottom boundary, a score is assigned:
+    the distance between the two endpoints divided by the length of the field line in the reference model.
+    Then the metric score can be obtained by the fraction of the initial footpoints in which these scores
+    are less than 10%.
     """
     x_arr = np.arange(2 * nresol_x) * (xmax - xmin) / (2 * nresol_x - 1) + xmin
     y_arr = np.arange(2 * nresol_y) * (ymax - ymin) / (2 * nresol_y - 1) + ymin
     z_arr = np.arange(nresol_z) * (zmax - zmin) / (nresol_z - 1) + zmin
 
+    # First startpoint close to origin
     x_0 = 1.0 * 10**-8
     y_0 = 1.0 * 10**-8
+
+    # Grid stepping size for footpoints and number of overall footpoints in x- and y-direction
     dx = stepsize
     dy = stepsize
     nlinesmaxx = math.floor(xmax / dx)
@@ -123,24 +132,34 @@ def field_div_metric(
     boxedges[0, 2] = 0.0
     boxedges[1, 2] = zmax
 
+    # set fieldline3D initial stepsize
     h1_ref = h1
     h1_rec = h1
 
+    # counter for number of footpoints that have an error in the endpoints smaller than 10 percent of field line length in reference model
     count = 0
+
+    # counter for number of field lines that are closed within box
     count_closed = 0
+
     for ilinesx in range(0, nlinesmaxx):
         for ilinesy in range(0, nlinesmaxy):
+
+            # Footpoint
             x_start = x_0 + dx * ilinesx
             y_start = y_0 + dy * ilinesy
+            ystart = [y_start, x_start, 0.0]
 
+            # decide direction of fieldline for reference model
             if B[int(y_start), int(x_start), 0, 2] < 0.0:
                 h1_ref = -h1_ref
-
+            # decide direction of fieldline for reconstruction model
             if b[int(y_start), int(x_start), 0, 2] < 0.0:
                 h1_rec = -h1_rec
 
-            ystart = [y_start, x_start, 0.0]
             # Fieldline3D expects startpt, BField, Row values, Column values so we need to give Y first, then X
+
+            # Get fieldline coordinates for reference model
             fieldline_ref = fieldline3d(
                 ystart,
                 B,
@@ -157,6 +176,7 @@ def field_div_metric(
                 coordsystem="cartesian",
             )
 
+            # Get fieldline coordinates for reconstruction model
             fieldline_rec = fieldline3d(
                 ystart,
                 b,
@@ -175,79 +195,57 @@ def field_div_metric(
 
             len_ref = len(fieldline_ref)
             len_rec = len(fieldline_rec)
-            fieldline_x_ref = np.zeros(len_ref)
-            fieldline_y_ref = np.zeros(len_ref)
-            fieldline_z_ref = np.zeros(len_ref)
 
-            fieldline_x_rec = np.zeros(len_rec)
-            fieldline_y_rec = np.zeros(len_rec)
-            fieldline_z_rec = np.zeros(len_rec)
+            valid_fieldline = True
 
-            fieldline_x_ref = fieldline_ref[:, 0]
-            fieldline_y_ref = fieldline_ref[:, 1]
-            fieldline_z_ref = fieldline_ref[:, 2]
+            # Check if field lines end on bottom boundary
+            if not np.isclose(fieldline_ref[len_ref - 1, 2], 0.0):
+                valid_fieldline = False
+            if not np.isclose(fieldline_rec[len_ref - 1, 2], 0.0):
+                valid_fieldline = False
+            if not (0.0 <= fieldline_ref[len_ref - 1, 1] <= xmax):
+                valid_fieldline = False
+            if not (0.0 <= fieldline_rec[len_ref - 1, 1] <= xmax):
+                valid_fieldline = False
+            if not (0.0 <= fieldline_ref[len_ref - 1, 0] <= ymax):
+                valid_fieldline = False
+            if not (0.0 <= fieldline_rec[len_ref - 1, 0] <= ymax):
+                valid_fieldline = False
 
-            fieldline_x_rec = fieldline_rec[:, 0]
-            fieldline_y_rec = fieldline_rec[:, 1]
-            fieldline_z_rec = fieldline_rec[:, 2]
+            if valid_fieldline:
 
-            if (0.0 <= fieldline_x_ref[len_ref - 1]) and (
-                fieldline_x_ref[len_ref - 1] <= xmax
-            ):
-                if (0.0 <= fieldline_y_ref[len_ref - 1]) and (
-                    fieldline_y_ref[len_ref - 1] <= ymax
-                ):
-                    if fieldline_z_ref[len_ref - 1] <= 0.00001:
-                        if (0.0 <= fieldline_x_rec[len_rec - 1]) and (
-                            fieldline_x_rec[len_rec - 1] <= xmax
-                        ):
-                            if (0.0 <= fieldline_y_rec[len_rec - 1]) and (
-                                fieldline_y_rec[len_rec - 1] <= ymax
-                            ):
-                                if fieldline_z_rec[len_rec - 1] <= 0.00001:
-                                    count_closed = count_closed + 1
-                                    num = np.sqrt(
-                                        (
-                                            fieldline_x_rec[len_rec - 1]
-                                            - fieldline_x_ref[len_ref - 1]
-                                        )
-                                        ** 2.0
-                                        + (
-                                            fieldline_y_rec[len_rec - 1]
-                                            - fieldline_y_ref[len_ref - 1]
-                                        )
-                                        ** 2.0
-                                        + (
-                                            fieldline_z_rec[len_rec - 1]
-                                            - fieldline_z_ref[len_ref - 1]
-                                        )
-                                        ** 2.0
-                                    )
+                # add to counter if field line is closed field line within box
+                count_closed = count_closed + 1
 
-                                    div = 0.0
-                                    for i in range(0, len_ref - 1):
-                                        div = div + np.sqrt(
-                                            (
-                                                fieldline_x_ref[i]
-                                                - fieldline_x_ref[i + 1]
-                                            )
-                                            ** 2.0
-                                            + (
-                                                fieldline_y_ref[i]
-                                                - fieldline_y_ref[i + 1]
-                                            )
-                                            ** 2.0
-                                            + (
-                                                fieldline_z_ref[i]
-                                                - fieldline_z_ref[i + 1]
-                                            )
-                                            ** 2.0
-                                        )
+                # calculate distance between the endpoints of reference field line and of reconstructed field line
+                num = np.sqrt(
+                    (fieldline_rec[len_rec - 1, 1] - fieldline_ref[len_ref - 1, 1])
+                    ** 2.0
+                    + (fieldline_rec[len_rec - 1, 0] - fieldline_ref[len_ref - 1, 0])
+                    ** 2.0
+                    + (fieldline_rec[len_rec - 1, 2] - fieldline_ref[len_ref - 1, 2])
+                    ** 2.0
+                )
 
-                                    temp = num / div
-                                    if temp <= 0.1:
-                                        count = count + 1
+                # calculate length of reference field line
+                div = 0.0
+                for i in range(0, len_ref - 1):
+                    div = div + np.sqrt(
+                        (fieldline_ref[i, 1] - fieldline_ref[i + 1, 1]) ** 2.0
+                        + (fieldline_ref[i, 0] - fieldline_ref[i + 1, 0]) ** 2.0
+                        + (fieldline_ref[i, 2] - fieldline_ref[i + 1, 2]) ** 2.0
+                    )
 
+                # divide distance between endpoints by length of reference field line
+                # gives error between endpoints as percentage of length of reference field line
+
+                temp = num / div
+
+                # add to counter if error is smaller than 10 percent
+                if temp <= 0.1:
+                    count = count + 1
+
+    # return number of footpoints with error smaller than 10 percent as percentage of all footpoints
     return count / (nlinesmaxx * nlinesmaxy)
 
 
@@ -262,6 +260,17 @@ def pearson_corr_coeff(
     zmin: np.float64,
     zmax: np.float64,
 ) -> Tuple[np.ndarray[np.float64, np.dtype[np.float64]], ...]:
+    """
+    Returns line-of-sigth integration (using composite trapezoidal rule) with respect to
+    the z-direction for pressure and density for two given magnetic field models
+    (reference model and reconstructed model) in the order:
+        (1) Pressure surface data for reference field
+        (2) Density surface data for reference field
+        (3) Pressure surface data for reconstructed field
+        (4) Density surface data for reconstructed field
+    Also, prints the Pearson Correlation Coefficient (reference and actual) for the line-of-sight integration
+    for both pressure and density between the reference and the recreated model.
+    """
 
     z_arr = np.arange(nresol_z) * (zmax - zmin) / (nresol_z - 1) + zmin
 
@@ -278,16 +287,20 @@ def pearson_corr_coeff(
             den_surface_rec[iy, ix] = np.trapz(den_3d_rec[:, iy, ix], z_arr)
 
     print(
-        "Pearson Ref Pres",
+        "Pearson Correlation reference value for pressure",
         pearsonr(pres_surface_ref.flatten(), pres_surface_ref.flatten()),
     )
     print(
-        "Pearson Ref Den",
+        "Pearson Correlation reference value for density",
         pearsonr(den_surface_ref.flatten(), den_surface_ref.flatten()),
     )
     print(
-        "Pearson Pres", pearsonr(pres_surface_rec.flatten(), pres_surface_ref.flatten())
+        "Pearson Correlation actual value for pressure",
+        pearsonr(pres_surface_rec.flatten(), pres_surface_ref.flatten()),
     )
-    print("Pearson Den", pearsonr(den_surface_rec.flatten(), den_surface_ref.flatten()))
+    print(
+        "Pearson Correlation actual value for density",
+        pearsonr(den_surface_rec.flatten(), den_surface_ref.flatten()),
+    )
 
     return pres_surface_ref, den_surface_ref, pres_surface_rec, den_surface_rec
