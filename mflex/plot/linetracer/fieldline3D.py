@@ -92,7 +92,7 @@ def getdr(r, x, y, z, csystem):
         dr = np.array([dx, dy, dz], dtype=np.float64)
     elif csystem[1]:
         dr = np.array([dx, xp * dy, dz], dtype=np.float64)
-    return dr
+    return dr  # type: ignore
 
 
 @njit
@@ -240,7 +240,7 @@ def outedge(r, minmax_box, csystem, periodicity):
     #    if np.isnan(i):
     #        outedge = True
 
-    return outedge
+    return outedge  # type: ignore
 
 
 @njit
@@ -461,7 +461,7 @@ def rkf45(
 
         # move exited point back to boundary of box
         if out:
-            rout = rt.copy()
+            rout = rt.copy()  # type: ignore
             rin = line[-1].copy()
             if rout[0] > minmax[1] or rout[0] < minmax[0]:
                 xedge = minmax[1] if rout[0] > minmax[1] else minmax[0]
@@ -581,7 +581,7 @@ def fieldline3d(
     # print('minmax', minmax)
     # minmax = np.array([-1, 1, -1, 1, 0, 1.5], dtype=np.float64)
     if boxedge is not None:
-        periodicity[:] = False
+        periodicity[:] = False  # type: ignore
         boxedge1 = boxedge.copy()
         if not gridcoord:
             for idim, dim in enumerate([x, y, z]):

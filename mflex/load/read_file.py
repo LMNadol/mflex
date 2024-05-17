@@ -61,6 +61,7 @@ def read_issi_rmhd(path: str, L: np.float64) -> Data3D:
     print("pixelsize_x, pixelsize_x_Mm", pixelsize_x, pixelsize_x_Mm)
     print("pixelsize_y, pixelsize_y_Mm", pixelsize_y, pixelsize_y_Mm)
     print("pixelsize_z, pixelsize_z_Mm", pixelsize_z, pixelsize_z_Mm)
+    print("z0", z0)
 
     return Data3D(
         data_bx,
@@ -163,7 +164,9 @@ def read_issi_analytical(path: str, L: np.float64) -> Data3D:
     )
 
 
-def read_fits_soar(path: str, L: np.float64, header: bool = False) -> DataBz:
+def read_fits_soar(
+    path: str, L: np.float64, header: bool = False, cmap: str = "bone"
+) -> DataBz:
     """
     Returns dataclass DataBz extracted from _blos.fits file
     previously downloaded from Solar Orbiter Archive.
@@ -172,13 +175,14 @@ def read_fits_soar(path: str, L: np.float64, header: bool = False) -> DataBz:
     with open(path) as data:
         # data.info()
         image = getdata(path, ext=False)
-        # x_len = image.shape[0]
-        # y_len = image.shape[1]
-        """plot_magnetogram_boundary(image, x_len, y_len)
-        x_start = int(input("First pixel x axis: "))
-        x_last = int(input("Last pixel x axis: "))
-        y_start = int(input("First pixel y axis: "))
-        y_last = int(input("Last pixel y axis: "))"""
+        x_len = image.shape[0]
+        y_len = image.shape[1]
+        plot_magnetogram_boundary(image, x_len, y_len, cmap=cmap)
+
+        # x_start = int(input("First pixel x axis: "))
+        # x_last = int(input("Last pixel x axis: "))
+        # y_start = int(input("First pixel y axis: "))
+        # y_last = int(input("Last pixel y axis: "))
         x_start = 400
         x_last = 1200
         y_start = 500

@@ -18,6 +18,39 @@ def vec_corr_metric(
     )
 
 
+def vec_corr_metric2(
+    B: np.ndarray[np.float64, np.dtype[np.float64]],
+    b: np.ndarray[np.float64, np.dtype[np.float64]],
+) -> np.float64:
+    """
+    Returns Vector Correlation metric of B : B_ref and b : B_rec.
+    """
+    sum1 = 0
+    sum2 = 0
+    sum3 = 0
+
+    for iy in range(B.shape[1]):
+        for ix in range(B.shape[2]):
+            for iz in range(B.shape[3]):
+                sum1 = sum1 + (
+                    B[0, iy, ix, iz] * b[0, iy, ix, iz]
+                    + B[1, iy, ix, iz] * b[1, iy, ix, iz]
+                    + B[2, iy, ix, iz] * b[2, iy, ix, iz]
+                )
+                sum2 = sum2 + (
+                    B[0, iy, ix, iz] * B[0, iy, ix, iz]
+                    + B[1, iy, ix, iz] * B[1, iy, ix, iz]
+                    + B[2, iy, ix, iz] * B[2, iy, ix, iz]
+                )
+                sum3 = sum3 + (
+                    b[0, iy, ix, iz] * b[0, iy, ix, iz]
+                    + b[1, iy, ix, iz] * b[1, iy, ix, iz]
+                    + b[2, iy, ix, iz] * b[2, iy, ix, iz]
+                )
+
+    return sum1 / np.sqrt(sum2 * sum3)
+
+
 def cau_Schw_metric(
     B: np.ndarray[np.float64, np.dtype[np.float64]],
     b: np.ndarray[np.float64, np.dtype[np.float64]],
@@ -28,8 +61,42 @@ def cau_Schw_metric(
 
     N = np.size(B)
     num = np.multiply(B, b)
-    div = np.reciprocal(np.multiply(abs(B), abs(b)))
+    div = np.reciprocal(
+        np.multiply(np.sqrt(np.multiply(B, B)), np.sqrt(np.multiply(b, b)))
+    )
     return np.sum(np.multiply(num, div)) / N
+
+
+def cau_Schw_metric2(
+    B: np.ndarray[np.float64, np.dtype[np.float64]],
+    b: np.ndarray[np.float64, np.dtype[np.float64]],
+) -> np.float64:
+    """
+    Returns Cauchy Schwarz metric of B : B_ref and b : B_rec.
+    """
+
+    sum1 = 0
+    for iy in range(B.shape[1]):
+        for ix in range(B.shape[2]):
+            for iz in range(B.shape[3]):
+                sum1 = sum1 + (
+                    B[0, iy, ix, iz] * b[0, iy, ix, iz]
+                    + B[1, iy, ix, iz] * b[1, iy, ix, iz]
+                    + B[2, iy, ix, iz] * b[2, iy, ix, iz]
+                ) / (
+                    np.sqrt(
+                        B[0, iy, ix, iz] * B[0, iy, ix, iz]
+                        + B[1, iy, ix, iz] * B[1, iy, ix, iz]
+                        + B[2, iy, ix, iz] * B[2, iy, ix, iz]
+                    )
+                    * np.sqrt(
+                        b[0, iy, ix, iz] * b[0, iy, ix, iz]
+                        + b[1, iy, ix, iz] * b[1, iy, ix, iz]
+                        + b[2, iy, ix, iz] * b[2, iy, ix, iz]
+                    )
+                )
+
+    return np.float64(sum1 / (B.shape[1] * B.shape[2] * B.shape[3]))
 
 
 def norm_vec_err_metric(
@@ -40,7 +107,38 @@ def norm_vec_err_metric(
     Returns Normalised Vector Error metric of B : B_ref and b : B_rec.
     """
 
-    return np.sum(abs(np.subtract(B, b))) / np.sum(np.abs(B))
+    return np.sum(np.abs(np.subtract(B, b))) / np.sum(np.abs(B))
+
+
+def norm_vec_err_metric2(
+    B: np.ndarray[np.float64, np.dtype[np.float64]],
+    b: np.ndarray[np.float64, np.dtype[np.float64]],
+) -> np.float64:
+    """
+    Returns Normalised Vector Error metric of B : B_ref and b : B_rec.
+    """
+
+    sum1 = 0
+    sum2 = 0
+
+    for iy in range(B.shape[1]):
+        for ix in range(B.shape[2]):
+            for iz in range(B.shape[3]):
+                sum1 = sum1 + np.sqrt(
+                    (B[0, iy, ix, iz] - b[0, iy, ix, iz])
+                    * (B[0, iy, ix, iz] - b[0, iy, ix, iz])
+                    + (B[1, iy, ix, iz] - b[1, iy, ix, iz])
+                    * (B[1, iy, ix, iz] - b[1, iy, ix, iz])
+                    + (B[2, iy, ix, iz] - b[2, iy, ix, iz])
+                    * (B[2, iy, ix, iz] - b[2, iy, ix, iz])
+                )
+                sum2 = sum2 + np.sqrt(
+                    B[0, iy, ix, iz] * B[0, iy, ix, iz]
+                    + B[1, iy, ix, iz] * B[1, iy, ix, iz]
+                    + B[2, iy, ix, iz] * B[2, iy, ix, iz]
+                )
+
+    return np.float64(sum1 / sum2)
 
 
 def mean_vec_err_metric(
@@ -52,10 +150,40 @@ def mean_vec_err_metric(
     """
 
     N = np.size(B)
-    num = abs(np.subtract(B, b))
-    div = abs(np.reciprocal(B))
+    num = np.abs(np.subtract(B, b))
+    div = np.abs(np.reciprocal(B))
 
     return np.sum(np.multiply(num, div)) / N
+
+
+def mean_vec_err_metric2(
+    B: np.ndarray[np.float64, np.dtype[np.float64]],
+    b: np.ndarray[np.float64, np.dtype[np.float64]],
+) -> np.float64:
+    """
+    Returns Mean Vector Error metric of B : B_ref and b : B_rec.
+    """
+
+    N = B.shape[1] * B.shape[2] * B.shape[3]
+    sum1 = 0
+
+    for iy in range(B.shape[1]):
+        for ix in range(B.shape[2]):
+            for iz in range(B.shape[3]):
+                sum1 = sum1 + np.sqrt(
+                    (B[0, iy, ix, iz] - b[0, iy, ix, iz])
+                    * (B[0, iy, ix, iz] - b[0, iy, ix, iz])
+                    + (B[1, iy, ix, iz] - b[1, iy, ix, iz])
+                    * (B[1, iy, ix, iz] - b[1, iy, ix, iz])
+                    + (B[2, iy, ix, iz] - b[2, iy, ix, iz])
+                    * (B[2, iy, ix, iz] - b[2, iy, ix, iz])
+                ) / np.sqrt(
+                    B[0, iy, ix, iz] * B[0, iy, ix, iz]
+                    + B[1, iy, ix, iz] * B[1, iy, ix, iz]
+                    + B[2, iy, ix, iz] * B[2, iy, ix, iz]
+                )
+
+    return np.float64(sum1 / N)
 
 
 def mag_ener_metric(
@@ -77,6 +205,31 @@ def mag_ener_metric(
     div = np.sqrt(np.dot(Bx, Bx) + np.dot(By, By) + np.dot(Bz, Bz))
 
     return num / div
+
+
+def mag_ener_metric2(
+    B: np.ndarray[np.float64, np.dtype[np.float64]],
+    b: np.ndarray[np.float64, np.dtype[np.float64]],
+) -> np.float64:
+
+    sum1 = 0
+    sum2 = 0
+
+    for iy in range(B.shape[1]):
+        for ix in range(B.shape[2]):
+            for iz in range(B.shape[3]):
+                sum1 = sum1 + (
+                    B[0, iy, ix, iz] * B[0, iy, ix, iz]
+                    + B[1, iy, ix, iz] * B[1, iy, ix, iz]
+                    + B[2, iy, ix, iz] * B[2, iy, ix, iz]
+                )
+                sum2 = sum2 + (
+                    b[0, iy, ix, iz] * b[0, iy, ix, iz]
+                    + b[1, iy, ix, iz] * b[1, iy, ix, iz]
+                    + b[2, iy, ix, iz] * b[2, iy, ix, iz]
+                )
+
+    return np.float64(sum1 / sum2)
 
 
 def field_div_metric(
@@ -201,15 +354,15 @@ def field_div_metric(
             # Check if field lines end on bottom boundary
             if not np.isclose(fieldline_ref[len_ref - 1, 2], 0.0):
                 valid_fieldline = False
-            if not np.isclose(fieldline_rec[len_ref - 1, 2], 0.0):
+            if not np.isclose(fieldline_rec[len_rec - 1, 2], 0.0):
                 valid_fieldline = False
             if not (0.0 <= fieldline_ref[len_ref - 1, 1] <= xmax):
                 valid_fieldline = False
-            if not (0.0 <= fieldline_rec[len_ref - 1, 1] <= xmax):
+            if not (0.0 <= fieldline_rec[len_rec - 1, 1] <= xmax):
                 valid_fieldline = False
             if not (0.0 <= fieldline_ref[len_ref - 1, 0] <= ymax):
                 valid_fieldline = False
-            if not (0.0 <= fieldline_rec[len_ref - 1, 0] <= ymax):
+            if not (0.0 <= fieldline_rec[len_rec - 1, 0] <= ymax):
                 valid_fieldline = False
 
             if valid_fieldline:
@@ -246,7 +399,7 @@ def field_div_metric(
                     count = count + 1
 
     # return number of footpoints with error smaller than 10 percent as percentage of all footpoints
-    return count / (nlinesmaxx * nlinesmaxy)
+    return np.float64(count / count_closed)
 
 
 def pearson_corr_coeff(
@@ -283,8 +436,65 @@ def pearson_corr_coeff(
         for iy in range(nresol_y):
             pres_surface_ref[iy, ix] = np.trapz(pres_3d_ref[:, iy, ix], z_arr)
             den_surface_ref[iy, ix] = np.trapz(den_3d_ref[:, iy, ix], z_arr)
-            pres_surface_rec[iy, ix] = np.trapz(pres_3d_rec[:, iy, ix], z_arr)
-            den_surface_rec[iy, ix] = np.trapz(den_3d_rec[:, iy, ix], z_arr)
+            pres_surface_rec[iy, ix] = np.trapz(pres_3d_rec[iy, ix, :], z_arr)
+            den_surface_rec[iy, ix] = np.trapz(den_3d_rec[iy, ix, :], z_arr)
+
+    print(
+        "Pearson Correlation reference value for pressure",
+        pearsonr(pres_surface_ref.flatten(), pres_surface_ref.flatten()),
+    )
+    print(
+        "Pearson Correlation reference value for density",
+        pearsonr(den_surface_ref.flatten(), den_surface_ref.flatten()),
+    )
+    print(
+        "Pearson Correlation actual value for pressure",
+        pearsonr(pres_surface_rec.flatten(), pres_surface_ref.flatten()),
+    )
+    print(
+        "Pearson Correlation actual value for density",
+        pearsonr(den_surface_rec.flatten(), den_surface_ref.flatten()),
+    )
+
+    return pres_surface_ref, den_surface_ref, pres_surface_rec, den_surface_rec
+
+
+def pearson_corr_coeff_comp(
+    pres_3d_ref: np.ndarray[np.float64, np.dtype[np.float64]],
+    den_3d_ref: np.ndarray[np.float64, np.dtype[np.float64]],
+    pres_3d_rec: np.ndarray[np.float64, np.dtype[np.float64]],
+    den_3d_rec: np.ndarray[np.float64, np.dtype[np.float64]],
+    nresol_x: int,
+    nresol_y: int,
+    nresol_z: int,
+    zmin: np.float64,
+    zmax: np.float64,
+) -> Tuple[np.ndarray[np.float64, np.dtype[np.float64]], ...]:
+    """
+    Returns line-of-sigth integration (using composite trapezoidal rule) with respect to
+    the z-direction for pressure and density for two given magnetic field models
+    (reference model and reconstructed model) in the order:
+        (1) Pressure surface data for reference field
+        (2) Density surface data for reference field
+        (3) Pressure surface data for reconstructed field
+        (4) Density surface data for reconstructed field
+    Also, prints the Pearson Correlation Coefficient (reference and actual) for the line-of-sight integration
+    for both pressure and density between the reference and the recreated model.
+    """
+
+    z_arr = np.arange(nresol_z) * (zmax - zmin) / (nresol_z - 1) + zmin
+
+    pres_surface_ref = np.zeros((nresol_y, nresol_x))
+    den_surface_ref = np.zeros((nresol_y, nresol_x))
+    pres_surface_rec = np.zeros((nresol_y, nresol_x))
+    den_surface_rec = np.zeros((nresol_y, nresol_x))
+
+    for ix in range(nresol_x):
+        for iy in range(nresol_y):
+            pres_surface_ref[iy, ix] = np.trapz(pres_3d_ref[iy, ix, :], z_arr)
+            den_surface_ref[iy, ix] = np.trapz(den_3d_ref[iy, ix, :], z_arr)
+            pres_surface_rec[iy, ix] = np.trapz(pres_3d_rec[iy, ix, :], z_arr)
+            den_surface_rec[iy, ix] = np.trapz(den_3d_rec[iy, ix, :], z_arr)
 
     print(
         "Pearson Correlation reference value for pressure",

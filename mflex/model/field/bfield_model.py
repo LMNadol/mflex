@@ -225,7 +225,6 @@ def get_phi_dphi(
             dphidz_arr[:, :, iz] = dphidz(z, p_arr, q_arr, z0, deltaz)
 
     elif solution == "Hypergeo":
-        # Repeat changes for this branch
 
         assert z0 is not None and deltaz is not None
 
@@ -353,6 +352,124 @@ def magnetic_field(
     sin_y = np.sin(np.outer(ky_arr, y_arr))
     cos_x = np.cos(np.outer(kx_arr, x_arr))
     cos_y = np.cos(np.outer(ky_arr, y_arr))
+
+    for iz in range(0, nresol_z):
+        coeffs = np.multiply(np.multiply(k2_arr, phi_arr[:, :, iz]), anm)
+        # Componentwise multiplication, [0:nf_max, 0:nf_max]
+        b_arr[:, :, iz, 2] = np.matmul(sin_y.T, np.matmul(coeffs, sin_x))
+        # [0:2*nresol_y, 0:nf_max]*([0:nf_max, 0:nf_max]*[0:nf_max, 0:2*nresol_x]) = [0:2*nresol_y, 0:2*nresol_x]
+
+        coeffs1 = np.multiply(np.multiply(anm, dphidz_arr[:, :, iz]), ky_grid)
+        # Componentwise multiplication, [0:nf_max, 0:nf_max]
+        coeffs2 = alpha * np.multiply(np.multiply(anm, phi_arr[:, :, iz]), kx_grid)
+        # Componentwise multiplication, [0:nf_max, 0:nf_max]
+        b_arr[:, :, iz, 0] = np.matmul(cos_y.T, np.matmul(coeffs1, sin_x)) - np.matmul(
+            sin_y.T, np.matmul(coeffs2, cos_x)
+        )
+        # [0:2*nresol_y, 0:nf_max]*([0:nf_max, 0:nf_max]*[0:nf_max, 0:2*nresol_x]) = [0:2*nresol_y, 0:2*nresol_x]
+
+        # Fieldline3D program was written for order B = [Bx,By,Bz] with indexing [ix,iy,iz] but here we have indexing [iy,ix,iz]
+        # so in order to be consistent we have to switch to order B = [Bx,By,Bz] such that fieldline3D program treats X and Y as Y and X consistently
+
+        coeffs3 = np.multiply(np.multiply(anm, dphidz_arr[:, :, iz]), kx_grid)
+        # Componentwise multiplication, [0:nf_max, 0:nf_max]
+        coeffs4 = alpha * np.multiply(np.multiply(anm, phi_arr[:, :, iz]), ky_grid)
+        # Componentwise multiplication, [0:nf_max, 0:nf_max]
+        b_arr[:, :, iz, 1] = np.matmul(sin_y.T, np.matmul(coeffs3, cos_x)) + np.matmul(
+            cos_y.T, np.matmul(coeffs4, sin_x)
+        )
+        # [0:2*nresol_y, 0:nf_max]*([0:nf_max, 0:nf_max]*[0:nf_max, 0:2*nresol_x]) = [0:2*nresol_y, 0:2*nresol_x]
+        coeffs5 = np.multiply(np.multiply(k2_arr, dphidz_arr[:, :, iz]), anm)
+        bz_derivs[:, :, iz, 2] = np.matmul(sin_y.T, np.matmul(coeffs5, sin_x))
+
+        coeffs6 = np.multiply(
+            np.multiply(np.multiply(k2_arr, phi_arr[:, :, iz]), anm), kx_grid
+        )
+        bz_derivs[:, :, iz, 1] = np.matmul(sin_y.T, np.matmul(coeffs6, cos_x))
+
+        coeffs7 = np.multiply(
+            np.multiply(np.multiply(k2_arr, phi_arr[:, :, iz]), anm),
+            ky_grid,
+        )
+        bz_derivs[:, :, iz, 0] = np.matmul(cos_y.T, np.matmul(coeffs7, sin_x))
+
+    return b_arr, bz_derivs
+
+
+def magnetic_field_test(
+    data_bz: np.ndarray[np.float64, np.dtype[np.float64]],
+    z0: np.float64,
+    deltaz: np.float64,
+    a: float,
+    b: float,
+    alpha: float,
+    xmin: np.float64,
+    xmax: np.float64,
+    ymin: np.float64,
+    ymax: np.float64,
+    zmin: np.float64,
+    zmax: np.float64,
+    nresol_x: int,
+    nresol_y: int,
+    nresol_z: int,
+    pixelsize_x: np.float64,
+    pixelsize_y: np.float64,
+    nf_max: int,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Given the Seehafer-mirrored photospheric magnetic field data_bz,
+    returns 3D magnetic field vector [By, Bx, Bz] calculated from
+    series expansion using anm, phi and dphidz.
+    """
+
+    data_bz_see = mirror_magnetogram(
+        data_bz, xmin, xmax, ymin, ymax, nresol_x, nresol_y
+    )
+
+    l_x = nresol_x * pixelsize_x * 2.0
+    l_y = nresol_y * pixelsize_y * 2.0
+
+    x_arr_see = np.arange(2.0 * nresol_x) * 2.0 * xmax / (2.0 * nresol_x - 1) - xmax
+    y_arr_see = np.arange(2.0 * nresol_y) * 2.0 * ymax / (2.0 * nresol_y - 1) - ymax
+    z_arr = np.arange(nresol_z) * (zmax - zmin) / (nresol_z - 1) + zmin
+
+    ratiodzls = deltaz  # Normalised deltaz
+
+    kx_arr = 2.0 * np.arange(nf_max) * np.pi / l_x
+    ky_arr = 2.0 * np.arange(nf_max) * np.pi / l_y
+    one_arr = 0.0 * np.arange(nf_max) + 1.0
+
+    ky_grid = np.outer(ky_arr, one_arr)  # [0:nf_max, 0:nf_max]
+    kx_grid = np.outer(one_arr, kx_arr)  # [0:nf_max, 0:nf_max]
+
+    # kx^2 + ky^2
+
+    k2_arr = np.outer(ky_arr**2, one_arr) + np.outer(one_arr, kx_arr**2)
+    k2_arr[0, 0] = (np.pi / l_x) ** 2 + (np.pi / l_y) ** 2
+
+    p_arr = 0.5 * ratiodzls * np.sqrt(k2_arr * (1.0 - a - a * b) - alpha**2)
+    q_arr = 0.5 * ratiodzls * np.sqrt(k2_arr * (1.0 - a + a * b) - alpha**2)
+
+    anm = np.divide(fft_coeff_seehafer(data_bz_see, nf_max), k2_arr)
+
+    phi_arr, dphidz_arr = get_phi_dphi(
+        z_arr,
+        q_arr,
+        p_arr,
+        nf_max,
+        nresol_z,
+        z0=z0,
+        deltaz=deltaz,
+        solution="Asym",
+    )
+
+    sin_x = np.sin(np.outer(kx_arr, x_arr_see))
+    sin_y = np.sin(np.outer(ky_arr, y_arr_see))
+    cos_x = np.cos(np.outer(kx_arr, x_arr_see))
+    cos_y = np.cos(np.outer(ky_arr, y_arr_see))
+
+    b_arr = np.zeros((2 * nresol_y, 2 * nresol_x, nresol_z, 3))
+    bz_derivs = np.zeros((2 * nresol_y, 2 * nresol_x, nresol_z, 3))
 
     for iz in range(0, nresol_z):
         coeffs = np.multiply(np.multiply(k2_arr, phi_arr[:, :, iz]), anm)

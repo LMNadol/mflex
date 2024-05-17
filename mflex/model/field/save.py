@@ -7,5 +7,5 @@ def save_field(
     path: str,
 ) -> None:
 
-    np.save("/Users/lilli/Desktop/mflex/results/" + path + "_bfield3d", data_b)
-    np.save("/Users/lilli/Desktop/mflex/results/" + path + "_dbzdxdydz3d", data_db)
+    np.save("/Users/lilli/Desktop/Paper/" + path + "_bfield3d", data_b)
+    np.save("/Users/lilli/Desktop/Paper/" + path + "_dbzdxdydz3d", data_db)
