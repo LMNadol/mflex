@@ -1411,6 +1411,8 @@ def plot_fieldlines_polar_paper(
 
     ax.set_zlim([zmin, zmax])  # type: ignore
     ax.view_init(0, -90)  # type: ignore
+    ax.set_yticks([])
+    ax.set_yticklabels([])
     plotname = (
         "/Users/lilli/Desktop/Paper/" + name + "_" + str(a) + "_" + str(alpha) + ".png"
     )
