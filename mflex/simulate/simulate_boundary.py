@@ -128,12 +128,10 @@ def dalmatian(x: np.float64, y: np.float64) -> np.float64:
 
     xx = np.pi * (x - 1.0)
     yy = np.pi * (y - 1.0)
-    mu_x = 1.0
-    mu_y = -mu_x
     kappa_x = 10.0
     kappa_y = kappa_x
-    mu_x1 = mu_x
-    mu_y1 = mu_y
+    mu_x1 = 1.0
+    mu_y1 = -1.0
     mu_x2 = -1.2
     mu_y2 = -1.2
     mu_x3 = -2.4
@@ -148,6 +146,8 @@ def dalmatian(x: np.float64, y: np.float64) -> np.float64:
     mu_y7 = -2.0
     mu_x8 = -1.0
     mu_y8 = -2.4
+    mu_x9 = -1.0
+    mu_y9 = 2.4
 
     return (
         +np.exp(kappa_x * np.cos(xx - mu_x1))
@@ -181,5 +181,9 @@ def dalmatian(x: np.float64, y: np.float64) -> np.float64:
         + np.exp(kappa_x * np.cos(xx - mu_x8))
         / (2.0 * np.pi * np.i0(kappa_x))
         * np.exp(kappa_y * np.cos(yy - mu_y8))
+        / (2.0 * np.pi * np.i0(kappa_y))
+        - np.exp(kappa_x * np.cos(xx - mu_x9))
+        / (2.0 * np.pi * np.i0(kappa_x))
+        * np.exp(kappa_y * np.cos(yy - mu_y9))
         / (2.0 * np.pi * np.i0(kappa_y))
     )
