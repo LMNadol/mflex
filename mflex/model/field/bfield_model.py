@@ -9,7 +9,6 @@ from mflex.model.field.utility.poloidal import (
     phi_hypgeo,
     dphidz_hypgeo,
 )
-from mflex.plot.plot_magnetogram import plot_magnetogram_boundary
 from numba import njit
 from typing import Tuple
 

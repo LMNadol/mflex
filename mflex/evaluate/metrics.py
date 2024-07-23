@@ -1,7 +1,7 @@
 from typing import Tuple
 import numpy as np
 import math
-from mflex.plot.linetracer.fieldline3D import fieldline3d
+from mflex.plot.linetracer.fieldline3D_old import fieldline3d
 from scipy.stats import pearsonr
 
 

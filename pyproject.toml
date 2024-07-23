@@ -22,6 +22,7 @@ drms = "^0.7.1"
 parfive = "^2.1.0"
 mayavi = "^4.8.2"
 configobj = "^5.0.8"
+pyqt5 = "^5.15.11"
 
 
 [tool.poetry.group.dev.dependencies]

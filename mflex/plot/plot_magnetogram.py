@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from mflex.plot.linetracer.fieldline3D import fieldline3d
+from mflex.plot.linetracer.fieldline3D_old import fieldline3d
 from datetime import datetime
 import math
-from mflex.plot.linetracer.linecheck import fieldlinecheck
+from mflex.plot.linetracer.linecheck_old import fieldlinecheck
 from matplotlib import colors
 
 
