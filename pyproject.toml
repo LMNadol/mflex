@@ -20,6 +20,8 @@ lxml = "^5.2.2"
 zeep = "^4.2.1"
 drms = "^0.7.1"
 parfive = "^2.1.0"
+mayavi = "^4.8.2"
+configobj = "^5.0.8"
 
 
 [tool.poetry.group.dev.dependencies]

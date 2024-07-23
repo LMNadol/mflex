@@ -2252,17 +2252,17 @@ def plot_fieldlines_dalmatian_paper(
     [t.set_ha("center") for t in ax.get_zticklabels()]
 
     ax.set_zlim([zmin, zmax])  # type: ignore
-    ax.view_init(0, -90)  # type: ignore
+    ax.view_init(90, -90)  # type: ignore
     # ax.view_init(30, -115, 0)  # type: ignore
 
     ax.grid(False)  # type : ignore
-    ax.set_yticks([])
-    ax.set_yticklabels([])
+    ax.set_zticks([])
+    ax.set_zticklabels([])
 
     plotname = (
         "/Users/lilli/Desktop/Paper/"
         + name
-        + "_2_"
+        # + "_2_"
         + str(a)
         + "_"
         + str(alpha)
