@@ -1,9 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from mflex.plot.linetracer.fieldline3D_old import fieldline3d
+from mflex.plot.linetracer.fieldline3D import fieldline3d
 from datetime import datetime
 import math
-from mflex.plot.linetracer.linecheck_old import fieldlinecheck
+
+# from mflex.plot.linetracer.linecheck_old import fieldlinecheck
 from matplotlib import colors
 
 
@@ -768,9 +769,6 @@ def plot_fieldlines_sdo_paper(
         offset=0.0,
     )
     # Have to have Xgrid first, Ygrid second, as Contourf expects x-axis/ columns first, then y-axis/rows
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_zlabel("z")  # type: ignore
     ax.set_zlim(zmin, zmax)  # type: ignore
     ax.set_xlim(0, xmax)
     ax.set_ylim(0, ymax)
@@ -778,17 +776,19 @@ def plot_fieldlines_sdo_paper(
 
     if view == "top":
         ax.view_init(90, -90)  # type: ignore
-        ax.set_zticklabels([])  # type: ignore
-        ax.set_zlabel("")  # type: ignore
+        ax.set_zticklabels([])  # type: ignore # type: ignore
         ax.set_xlabel("x", labelpad=15)
+        ax.set_ylabel("y")
+        ax.text(10.0, 130.0, 20.0, "(d)", fontsize=14)
     if view == "angular":
         ax.view_init(30, 240, 0)  # type: ignore
     if view == "side":
         ax.view_init(0, -90)  # type: ignore
         ax.set_yticklabels([])  # type: ignore
         ax.set_xlabel("x", labelpad=30)
-        ax.set_ylabel("")
+        ax.set_zlabel("z")
         ax.set_zticks(np.arange(0, zmax + 1, 5))  # type: ignore
+        ax.text(15.0, 20.0, 15.0, "(d)", fontsize=14)
 
     ax.set_box_aspect((xmax, ymax, 3 * zmax))  # type: ignore
 
@@ -887,8 +887,16 @@ def plot_fieldlines_sdo_paper(
     [t.set_va("center") for t in ax.get_zticklabels()]
     [t.set_ha("center") for t in ax.get_zticklabels()]
 
-    plotname = "/Users/lilli/Desktop/Colortests/color_test_" + view + ".png"
-    plt.savefig(plotname, dpi=300)
+    plotname = (
+        "/Users/lilli/Desktop/Paper/fieldlines_"
+        + str(a)
+        + "_"
+        + str(alpha)
+        + "_"
+        + view
+        + ".png"
+    )
+    plt.savefig(plotname, dpi=300, bbox_inches="tight")
 
     plt.show()
 
@@ -1019,7 +1027,7 @@ def plot_fieldlines_sdo_paper_zoom(
                     fieldline_y,
                     fieldline_x,
                     fieldline_z,
-                    color="magenta",
+                    color=(0.420, 0.502, 1.000),
                     linewidth=0.25,
                     zorder=4000,
                 )
@@ -1028,28 +1036,21 @@ def plot_fieldlines_sdo_paper_zoom(
                     fieldline_y,
                     fieldline_x,
                     fieldline_z,
-                    color="magenta",
+                    color=(0.420, 0.502, 1.000),
                     linewidth=0.25,
                     zorder=4000,
                 )
 
-    current_time = datetime.now()
-    dt_string = current_time.strftime("%d-%m-%Y_%H-%M-%S")
-
     plotname = (
-        "/Users/lilli/Desktop/Paper/hmi_m_45s_2024_05_07_07_31_30_tai_magnetogram_mflex_"
+        "/Users/lilli/Desktop/Paper/fieldlines_zoom_"
         + str(a)
-        + "_"
-        + str(b)
         + "_"
         + str(alpha)
         + "_"
         + view
-        + "_"
-        + dt_string
         + ".png"
     )
-    plt.savefig(plotname, dpi=300)
+    plt.savefig(plotname, dpi=300, bbox_inches="tight")
 
     plt.show()
 
@@ -2063,6 +2064,7 @@ def plot_fieldlines_dalmatian_paper(
     nf_max: float,
     name: str,
     cmap: str = "bone",
+    label: str = "(a)",
 ):
     """
     Returns 3D plot of photospheric magnetic field including field line extrapolation.
@@ -2156,25 +2158,21 @@ def plot_fieldlines_dalmatian_paper(
                     coordsystem="cartesian",
                 )  # , periodicity='xy')
 
-                # Plot fieldlines
-                fieldlines = fieldlinecheck(fieldline, 0.0, xmax, 0.0, ymax)
+                fieldline_x = np.zeros(len(fieldline))
+                fieldline_y = np.zeros(len(fieldline))
+                fieldline_z = np.zeros(len(fieldline))
+                fieldline_x[:] = fieldline[:, 1]
+                fieldline_y[:] = fieldline[:, 0]
+                fieldline_z[:] = fieldline[:, 2]
 
-                for line in fieldlines:
-                    fieldline_x = np.zeros(len(line))
-                    fieldline_y = np.zeros(len(line))
-                    fieldline_z = np.zeros(len(line))
-                    fieldline_x[:] = line[:, 1]
-                    fieldline_y[:] = line[:, 0]
-                    fieldline_z[:] = line[:, 2]
-
-                    ax.plot(
-                        fieldline_x,
-                        fieldline_y,
-                        fieldline_z,
-                        color=(0.420, 0.502, 1.000),
-                        linewidth=0.5,
-                        zorder=4000,
-                    )
+                ax.plot(
+                    fieldline_x,
+                    fieldline_y,
+                    fieldline_z,
+                    color=(0.420, 0.502, 1.000),
+                    linewidth=0.5,
+                    zorder=4000,
+                )
 
     # nlinesmaxr = 2
     # nlinesmaxphi = 5
@@ -2252,12 +2250,13 @@ def plot_fieldlines_dalmatian_paper(
     [t.set_ha("center") for t in ax.get_zticklabels()]
 
     ax.set_zlim([zmin, zmax])  # type: ignore
-    ax.view_init(90, -90)  # type: ignore
+    ax.view_init(0, -90)  # type: ignore
     # ax.view_init(30, -115, 0)  # type: ignore
 
     ax.grid(False)  # type : ignore
-    ax.set_zticks([])
-    ax.set_zticklabels([])
+    ax.set_yticks([])
+    ax.set_yticklabels([])
+    ax.text(1.6, 1.8, 1.8, label, fontsize=14)
 
     plotname = (
         "/Users/lilli/Desktop/Paper/"
@@ -2268,7 +2267,7 @@ def plot_fieldlines_dalmatian_paper(
         + str(alpha)
         + ".png"
     )
-    plt.savefig(plotname, dpi=300)
+    plt.savefig(plotname, dpi=300, bbox_inches="tight")
 
     plt.show()
 
