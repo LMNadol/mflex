@@ -1,7 +1,7 @@
 from typing import Tuple
 import numpy as np
 import math
-from msat.pyvis.fieldline3d import fieldline3d
+from mflex.plot.linetracer.fieldline3D import fieldline3d
 from scipy.stats import pearsonr
 
 
@@ -249,7 +249,7 @@ def field_div_metric(
     zmin: np.float64,
     zmax: np.float64,
     stepsize,
-) -> np.float64:
+) -> Tuple:
     """
     Returns Field Line Divergence metric of B : B_ref and b : B_rec.
     xmin, ymin, ymax as when using plot_fieldline_grid.
@@ -295,8 +295,12 @@ def field_div_metric(
     # counter for number of field lines that are closed within box
     count_closed = 0
 
+    count_all = 0
+
     for ilinesx in range(0, nlinesmaxx):
         for ilinesy in range(0, nlinesmaxy):
+
+            count_all = count_all + 1
 
             # Footpoint
             x_start = x_0 + dx * ilinesx
@@ -398,8 +402,8 @@ def field_div_metric(
                 if temp <= 0.1:
                     count = count + 1
 
-    # return number of footpoints with error smaller than 10 percent as percentage of all footpoints
-    return np.float64(count / count_closed)
+    # return number of footpoints with error smaller than 10 percent as percentage of all footpoints, of all closed fieldlines
+    return np.float64(count / count_all), np.float64(count / count_closed)
 
 
 def pearson_corr_coeff(
