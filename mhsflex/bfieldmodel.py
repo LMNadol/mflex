@@ -14,7 +14,7 @@ def mirror(
     nx = field.shape[0]
     ny = field.shape[1]
 
-    field_big = np.array((2 * nx, 2 * ny))
+    field_big = np.zeros((2 * nx, 2 * ny))
 
     for ix in range(nx):
         for iy in range(ny):
