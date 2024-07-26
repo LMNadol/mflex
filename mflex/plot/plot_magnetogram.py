@@ -745,6 +745,7 @@ def plot_fieldlines_sdo_paper(
     stepsize: float = 0.1,
     view: str = "top",
     cmap: str = "bone",
+    name: str = "(a)",
 ):
     """
     Returns 3D plot of photospheric magnetic field including field line extrapolation.
@@ -777,9 +778,9 @@ def plot_fieldlines_sdo_paper(
     if view == "top":
         ax.view_init(90, -90)  # type: ignore
         ax.set_zticklabels([])  # type: ignore # type: ignore
-        ax.set_xlabel("x", labelpad=15)
+        ax.set_xlabel("x", labelpad=12)
         ax.set_ylabel("y")
-        ax.text(10.0, 130.0, 20.0, "(d)", fontsize=14)
+        ax.text(10.0, 130.0, 20.0, name, fontsize=10)
     if view == "angular":
         ax.view_init(30, 240, 0)  # type: ignore
     if view == "side":
@@ -787,8 +788,9 @@ def plot_fieldlines_sdo_paper(
         ax.set_yticklabels([])  # type: ignore
         ax.set_xlabel("x", labelpad=30)
         ax.set_zlabel("z")
+        ax.set_ylabel("")
         ax.set_zticks(np.arange(0, zmax + 1, 5))  # type: ignore
-        ax.text(15.0, 20.0, 15.0, "(d)", fontsize=14)
+        ax.text(15.0, 20.0, 15.0, name, fontsize=10)
 
     ax.set_box_aspect((xmax, ymax, 3 * zmax))  # type: ignore
 
@@ -868,11 +870,11 @@ def plot_fieldlines_sdo_paper(
     dt_string = current_time.strftime("%d-%m-%Y_%H-%M-%S")
 
     ax.xaxis._axinfo["tick"]["inward_factor"] = 0  # type : ignore
-    ax.xaxis._axinfo["tick"]["outward_factor"] = 0.2  # type : ignore
+    ax.xaxis._axinfo["tick"]["outward_factor"] = -0.2  # type : ignore
     ax.yaxis._axinfo["tick"]["inward_factor"] = 0  # type : ignore
-    ax.yaxis._axinfo["tick"]["outward_factor"] = 0.2  # type : ignore
+    ax.yaxis._axinfo["tick"]["outward_factor"] = -0.2  # type : ignore
     ax.zaxis._axinfo["tick"]["inward_factor"] = 0  # type : ignore
-    ax.zaxis._axinfo["tick"]["outward_factor"] = 0.2  # type : ignore
+    ax.zaxis._axinfo["tick"]["outward_factor"] = -0.2  # type : ignore
 
     ax.xaxis.pane.fill = False  # type : ignore
     ax.yaxis.pane.fill = False  # type : ignore
@@ -896,7 +898,7 @@ def plot_fieldlines_sdo_paper(
         + view
         + ".png"
     )
-    plt.savefig(plotname, dpi=300, bbox_inches="tight")
+    plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.2)
 
     plt.show()
 
@@ -923,6 +925,7 @@ def plot_fieldlines_sdo_paper_zoom(
     stepsize: float = 0.1,
     view: str = "top",
     cmap: str = "bone",
+    name: str = "(a)",
 ):
     """
     Returns 3D plot of photospheric magnetic field including field line extrapolation.
@@ -958,14 +961,38 @@ def plot_fieldlines_sdo_paper_zoom(
         ax.set_zticklabels([])  # type: ignore
         ax.set_zlabel("")  # type: ignore
         ax.set_xlabel("x", labelpad=15)
+        ax.set_ylabel("y")
+        ax.text(0.0, 130.0, 20.0, name, fontsize=10)
     if view == "angular":
         ax.view_init(30, 240, 0)  # type: ignore
     if view == "side":
         ax.view_init(0, -90)  # type: ignore
         ax.set_yticklabels([])  # type: ignore
         ax.set_xlabel("x", labelpad=75)
+        ax.set_zlabel("z")
         ax.set_ylabel("")
         ax.set_zticks(np.arange(0, 2 * z0 + 1, 2))  # type: ignore
+        ax.text(0.0, 2.0, 2.0, name, fontsize=10)
+
+    ax.xaxis._axinfo["tick"]["inward_factor"] = 0  # type : ignore
+    ax.xaxis._axinfo["tick"]["outward_factor"] = -0.2  # type : ignore
+    ax.yaxis._axinfo["tick"]["inward_factor"] = 0  # type : ignore
+    ax.yaxis._axinfo["tick"]["outward_factor"] = -0.2  # type : ignore
+    ax.zaxis._axinfo["tick"]["inward_factor"] = 0  # type : ignore
+    ax.zaxis._axinfo["tick"]["outward_factor"] = -0.2  # type : ignore
+
+    ax.xaxis.pane.fill = False  # type : ignore
+    ax.yaxis.pane.fill = False  # type : ignore
+    ax.zaxis.pane.fill = False  # type : ignore
+
+    [t.set_va("center") for t in ax.get_yticklabels()]
+    [t.set_ha("center") for t in ax.get_yticklabels()]
+
+    [t.set_va("top") for t in ax.get_xticklabels()]
+    [t.set_ha("center") for t in ax.get_xticklabels()]
+
+    [t.set_va("center") for t in ax.get_zticklabels()]
+    [t.set_ha("center") for t in ax.get_zticklabels()]
 
     ax.set_box_aspect((xmax, ymax, 10 * z0))  # type: ignore
 
@@ -1050,7 +1077,7 @@ def plot_fieldlines_sdo_paper_zoom(
         + view
         + ".png"
     )
-    plt.savefig(plotname, dpi=300, bbox_inches="tight")
+    plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.2)
 
     plt.show()
 
@@ -2075,8 +2102,9 @@ def plot_fieldlines_dalmatian_paper(
     y_arr = np.arange(2 * nresol_y) * (ymax - ymin) / (2 * nresol_y - 1) + ymin
     z_arr = np.arange(nresol_z) * (zmax - zmin) / (nresol_z - 1) + zmin
     x_grid, y_grid = np.meshgrid(x_arr, y_arr)
-
+    cm = 1 / 2.54
     fig = plt.figure()
+
     ax = fig.add_subplot(111, projection="3d")
     ax.contourf(
         x_grid[nresol_y : 2 * nresol_y, nresol_x : 2 * nresol_x],
@@ -2087,9 +2115,7 @@ def plot_fieldlines_dalmatian_paper(
         offset=0.0,
     )
     # Have to have Xgrid first, Ygrid second, as Contourf expects x-axis/ columns first, then y-axis/rows
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_zlabel("z")  # type: ignore
+
     # ax.set_zlim([zmin, zmax])
     ax.view_init(0, -90)  # type: ignore
 
@@ -2230,9 +2256,9 @@ def plot_fieldlines_dalmatian_paper(
     #             )
 
     ax.xaxis._axinfo["tick"]["inward_factor"] = 0  # type : ignore
-    ax.xaxis._axinfo["tick"]["outward_factor"] = 0.2  # type : ignore
+    ax.xaxis._axinfo["tick"]["outward_factor"] = -0.2  # type : ignore
     ax.yaxis._axinfo["tick"]["inward_factor"] = 0  # type : ignore
-    ax.yaxis._axinfo["tick"]["outward_factor"] = 0.2  # type : ignore
+    ax.yaxis._axinfo["tick"]["outward_factor"] = -0.2  # type : ignore
     ax.zaxis._axinfo["tick"]["inward_factor"] = 0  # type : ignore
     ax.zaxis._axinfo["tick"]["outward_factor"] = 0.2  # type : ignore
 
@@ -2243,31 +2269,49 @@ def plot_fieldlines_dalmatian_paper(
     [t.set_va("center") for t in ax.get_yticklabels()]
     [t.set_ha("center") for t in ax.get_yticklabels()]
 
-    [t.set_va("top") for t in ax.get_xticklabels()]
+    [t.set_va("center") for t in ax.get_xticklabels()]
     [t.set_ha("center") for t in ax.get_xticklabels()]
 
     [t.set_va("center") for t in ax.get_zticklabels()]
     [t.set_ha("center") for t in ax.get_zticklabels()]
 
     ax.set_zlim([zmin, zmax])  # type: ignore
-    ax.view_init(0, -90)  # type: ignore
+    ax.view_init(90, -90)  # type: ignore
     # ax.view_init(30, -115, 0)  # type: ignore
 
     ax.grid(False)  # type : ignore
-    ax.set_yticks([])
-    ax.set_yticklabels([])
-    ax.text(1.6, 1.8, 1.8, label, fontsize=14)
+    ax.set_xticks(np.arange(0.0, 2.1, 0.5))
+    ax.set_xticklabels(np.arange(0.0, 2.1, 0.5))
+    ax.set_zticks([])
+    ax.set_zticklabels([])
+    ax.set_yticks(np.arange(0.0, 2.1, 0.5))
+    ax.set_yticklabels(np.arange(0.0, 2.1, 0.5))
+
+    ax.text(1.65, 1.7, 1.8, label, fontsize=10)
+
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    # ax.set_zlabel("z")  # type: ignore
+
+    # plt.subplots_adjust(top=1, bottom=-0.2, left=-0.2, right=1)
 
     plotname = (
         "/Users/lilli/Desktop/Paper/"
         + name
-        # + "_2_"
+        + "_2_"
         + str(a)
         + "_"
         + str(alpha)
         + ".png"
     )
-    plt.savefig(plotname, dpi=300, bbox_inches="tight")
+
+    # bottom_pos = -1
+    # top_pos = 1
+    # left_pos = -1
+    # right_pos = 1
+    # fig.subplots_adjust(bottom=bottom_pos, top=top_pos, left=left_pos, right=right_pos)
+
+    plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0)
 
     plt.show()
 
@@ -2369,26 +2413,43 @@ def plot_fieldlines_polar_paper2(
                 coordsystem="cartesian",
             )  # , periodicity='xy')
 
-            # Plot fieldlines
-            fieldlines = fieldlinecheck(fieldline, 0.0, xmax, 0.0, ymax)
+            # # Plot fieldlines
+            # fieldlines = fieldlinecheck(fieldline, 0.0, xmax, 0.0, ymax)
 
-            for line in fieldlines:
-                fieldline_x = np.zeros(len(line))
-                fieldline_y = np.zeros(len(line))
-                fieldline_z = np.zeros(len(line))
-                fieldline_x[:] = line[:, 1]
-                fieldline_y[:] = line[:, 0]
-                fieldline_z[:] = line[:, 2]
+            # for line in fieldlines:
+            #     fieldline_x = np.zeros(len(line))
+            #     fieldline_y = np.zeros(len(line))
+            #     fieldline_z = np.zeros(len(line))
+            #     fieldline_x[:] = line[:, 1]
+            #     fieldline_y[:] = line[:, 0]
+            #     fieldline_z[:] = line[:, 2]
 
-                # Need to give row direction first/ Y, then column direction/ X
-                ax.plot(
-                    fieldline_x,
-                    fieldline_y,
-                    fieldline_z,
-                    color="magenta",
-                    linewidth=0.5,
-                    zorder=4000,
-                )
+            #     # Need to give row direction first/ Y, then column direction/ X
+            #     ax.plot(
+            #         fieldline_x,
+            #         fieldline_y,
+            #         fieldline_z,
+            #         color="magenta",
+            #         linewidth=0.5,
+            #         zorder=4000,
+            #     )
+
+            fieldline_x = np.zeros(len(fieldline))
+            fieldline_y = np.zeros(len(fieldline))
+            fieldline_z = np.zeros(len(fieldline))
+            fieldline_x[:] = fieldline[:, 1]
+            fieldline_y[:] = fieldline[:, 0]
+            fieldline_z[:] = fieldline[:, 2]
+
+            # Need to give row direction first/ Y, then column direction/ X
+            ax.plot(
+                fieldline_x,
+                fieldline_y,
+                fieldline_z,
+                color="magenta",
+                linewidth=0.5,
+                zorder=4000,
+            )
 
             fieldline2 = fieldline3d(
                 ystart,
@@ -2407,25 +2468,42 @@ def plot_fieldlines_polar_paper2(
             )  # , periodicity='xy')
 
             # Plot fieldlines
-            fieldlines2 = fieldlinecheck(fieldline2, 0.0, xmax, 0.0, ymax)
+            # fieldlines2 = fieldlinecheck(fieldline2, 0.0, xmax, 0.0, ymax)
 
-            for line in fieldlines2:
-                fieldline_x2 = np.zeros(len(line))
-                fieldline_y2 = np.zeros(len(line))
-                fieldline_z2 = np.zeros(len(line))
-                fieldline_x2[:] = line[:, 1]
-                fieldline_y2[:] = line[:, 0]
-                fieldline_z2[:] = line[:, 2]
+            # for line in fieldlines2:
+            #     fieldline_x2 = np.zeros(len(line))
+            #     fieldline_y2 = np.zeros(len(line))
+            #     fieldline_z2 = np.zeros(len(line))
+            #     fieldline_x2[:] = line[:, 1]
+            #     fieldline_y2[:] = line[:, 0]
+            #     fieldline_z2[:] = line[:, 2]
 
-                # Need to give row direction first/ Y, then column direction/ X
-                ax.plot(
-                    fieldline_x2,
-                    fieldline_y2,
-                    fieldline_z2,
-                    color="greenyellow",
-                    linewidth=0.5,
-                    zorder=4000,
-                )
+            #     # Need to give row direction first/ Y, then column direction/ X
+            #     ax.plot(
+            #         fieldline_x2,
+            #         fieldline_y2,
+            #         fieldline_z2,
+            #         color="greenyellow",
+            #         linewidth=0.5,
+            #         zorder=4000,
+            #     )
+
+            fieldline_x2 = np.zeros(len(fieldline2))
+            fieldline_y2 = np.zeros(len(fieldline2))
+            fieldline_z2 = np.zeros(len(fieldline2))
+            fieldline_x2[:] = fieldline2[:, 1]
+            fieldline_y2[:] = fieldline2[:, 0]
+            fieldline_z2[:] = fieldline2[:, 2]
+
+            # Need to give row direction first/ Y, then column direction/ X
+            ax.plot(
+                fieldline_x2,
+                fieldline_y2,
+                fieldline_z2,
+                color="greenyellow",
+                linewidth=0.5,
+                zorder=4000,
+            )
 
     nlinesmaxr = 2
     nlinesmaxphi = 5

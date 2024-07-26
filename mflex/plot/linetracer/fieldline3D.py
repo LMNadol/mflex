@@ -591,7 +591,9 @@ def fieldline3d(
                 # print('idim, dim', idim, dim)
                 for im in range(2):
                     # print('im', im)
-                    index = np.argwhere(boxedge[im, idim] >= dim).max() - 1
+                    index = (
+                        np.argwhere(boxedge[im, idim] >= dim).max() - 1
+                    )  # Had to add -1 here
                     # print('index', index)
                     boxedge1[im, idim] = index + (boxedge[im, idim] - dim[index]) / (
                         dim[index + 1] - dim[index]
