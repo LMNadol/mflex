@@ -134,13 +134,6 @@ def b3d(field):
     # print("length scale x norm", lxn)
     # print("length scale y norm", lxn)
 
-    field.x_big = (
-        np.arange(2.0 * field.nx) * 2.0 * field.xmax / (2.0 * field.nx - 1) - field.xmax
-    )
-    field.y_big = (
-        np.arange(2.0 * field.ny) * 2.0 * field.ymax / (2.0 * field.ny - 1) - field.ymax
-    )
-
     kx = np.arange(field.nf) * np.pi / lxn
     ky = np.arange(field.nf) * np.pi / lyn
     ones = 0.0 * np.arange(field.nf) + 1.0

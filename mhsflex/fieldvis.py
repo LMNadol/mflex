@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib import rc, colors
 
-from scipy.signal import argrelextrema
 from scipy.ndimage import maximum_filter, label, find_objects, minimum_filter
 
 from msat.pyvis.fieldline3d import fieldline3d
@@ -70,6 +69,13 @@ class Field3d:
 
         self.field = np.zeros((2 * self.ny, 2 * self.nx, self.nz, 3))
         self.dfield = np.zeros((2 * self.ny, 2 * self.nx, self.nz, 3))
+
+        self.x_big = (
+            np.arange(2.0 * self.nx) * 2.0 * self.xmax / (2.0 * self.nx - 1) - self.xmax
+        )
+        self.y_big = (
+            np.arange(2.0 * self.ny) * 2.0 * self.ymax / (2.0 * self.ny - 1) - self.ymax
+        )
 
         b3d(self)
 
@@ -175,7 +181,7 @@ class Field3d:
         self.ax.set_zlim(self.zmin, self.zmax)  # type: ignore
         self.ax.set_xlim(self.xmin, self.xmax)
         self.ax.set_ylim(self.ymin, self.ymax)
-        self.ax.set_box_aspect((self.ymax, self.xmax, self.zmax))
+        self.ax.set_box_aspect((self.ymax, self.xmax, self.zmax))  # type : ignore
 
         self.ax.xaxis._axinfo["tick"]["inward_factor"] = 0.2  # type : ignore
         self.ax.xaxis._axinfo["tick"]["outward_factor"] = 0  # type : ignore
@@ -188,14 +194,14 @@ class Field3d:
         self.ax.yaxis.pane.fill = False  # type : ignore
         self.ax.zaxis.pane.fill = False  # type : ignore
 
-        [t.set_va("center") for t in self.ax.get_yticklabels()]
-        [t.set_ha("center") for t in self.ax.get_yticklabels()]
+        [t.set_va("center") for t in self.ax.get_yticklabels()]  # type : ignore
+        [t.set_ha("center") for t in self.ax.get_yticklabels()]  # type : ignore
 
-        [t.set_va("top") for t in self.ax.get_xticklabels()]
-        [t.set_ha("center") for t in self.ax.get_xticklabels()]
+        [t.set_va("top") for t in self.ax.get_xticklabels()]  # type : ignore
+        [t.set_ha("center") for t in self.ax.get_xticklabels()]  # type : ignore
 
-        [t.set_va("center") for t in self.ax.get_zticklabels()]
-        [t.set_ha("center") for t in self.ax.get_zticklabels()]
+        [t.set_va("center") for t in self.ax.get_zticklabels()]  # type : ignore
+        [t.set_ha("center") for t in self.ax.get_zticklabels()]  # type : ignore
 
         self.ax.view_init(90, -90)  # type: ignore
 
@@ -365,26 +371,22 @@ class Field3d:
         neighborhood_size = 70
         threshold = 1.5
 
-        data_max = maximum_filter(self.bz, neighborhood_size)
+        data_max = maximum_filter(self.bz, neighborhood_size)  # mode ='reflect'?
         maxima = self.bz == data_max
         data_min = minimum_filter(self.bz, neighborhood_size)
         minima = self.bz == data_min
+
         diff = (data_max - data_min) > threshold
         maxima[diff == 0] = 0
         minima[diff == 0] = 0
 
-        labeled_sinks, num_objects_sinks = label(minima)
-        slices_sinks = find_objects(labeled_sinks)
-        x_sinks, y_sinks = [], []
         labeled_sources, num_objects_sources = label(maxima)
         slices_sources = find_objects(labeled_sources)
         x_sources, y_sources = [], []
 
-        for dy, dx in slices_sinks:
-            x_center = (dx.start + dx.stop - 1) / 2
-            x_sinks.append(x_center / (self.nx / self.xmax))
-            y_center = (dy.start + dy.stop - 1) / 2
-            y_sinks.append(y_center / (self.ny / self.ymax))
+        labeled_sinks, num_objects_sinks = label(minima)
+        slices_sinks = find_objects(labeled_sinks)
+        x_sinks, y_sinks = [], []
 
         for dy, dx in slices_sources:
             x_center = (dx.start + dx.stop - 1) / 2
@@ -392,10 +394,17 @@ class Field3d:
             y_center = (dy.start + dy.stop - 1) / 2
             y_sources.append(y_center / (self.ny / self.ymax))
 
-        self.sinksx = x_sinks
-        self.sinksy = y_sinks
+        for dy, dx in slices_sinks:
+            x_center = (dx.start + dx.stop - 1) / 2
+            x_sinks.append(x_center / (self.nx / self.xmax))
+            y_center = (dy.start + dy.stop - 1) / 2
+            y_sinks.append(y_center / (self.ny / self.ymax))
+
         self.sourcesx = x_sources
         self.sourcesy = y_sources
+
+        self.sinksx = x_sinks
+        self.sinksy = y_sinks
 
     def plot_ss(self):
 
