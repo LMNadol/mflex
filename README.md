@@ -1,4 +1,4 @@
-## Magnetohydrostatic Field Line Extrapolation Package (MFLEX)
+## Magnetohydrostatic Field Line Extrapolation Package (MHSFLEX)
 
 #### Lilli Nadol
 #### lmn6@st-andrews.ac.uk
