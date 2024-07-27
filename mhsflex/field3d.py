@@ -1,462 +1,219 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import rc, colors
-import math
-from mhsflex.bfieldmodel import mirror, fftcoeff, get_phi_dphi
-from msat.pyvis.fieldline3d import fieldline3d
-from scipy.signal import argrelextrema
-from scipy.ndimage import maximum_filter, label, find_objects, minimum_filter
-import matplotlib.patches as mpatches
-
-rc("font", **{"family": "serif", "serif": ["Times"]})
-rc("text", usetex=True)
-
-cmap = colors.LinearSegmentedColormap.from_list(
-    "cmap",
-    (
-        (0.000, (0.000, 0.000, 0.000)),
-        (0.500, (0.659, 0.659, 0.659)),
-        (1.000, (1.000, 1.000, 1.000)),
-    ),
-)
-c1 = (1.000, 0.224, 0.376)
-c2 = (0.420, 0.502, 1.000)
-norm = colors.SymLogNorm(50, vmin=-7.5e2, vmax=7.5e2)
+from mhsflex.poloidal import phi, dphidz, phi_hypgeo, phi_low, dphidz_hypgeo, dphidz_low
 
 
-class Field3d:
+def mirror(
+    field: np.ndarray[np.float64, np.dtype[np.float64]],
+) -> np.ndarray[np.float64, np.dtype[np.float64]]:
+    """
+    Given the photospheric magnetic field data_bz,
+    returns Seehafer-mirrored Bz field vector.
+    Four times the size of original photospheric Bz vector.
+    """
 
-    def __init__(
-        self,
-        path2file: str,
-        a,
-        b,
-        alpha,
-        z0,
-        deltaz,
-    ):
+    nx = field.shape[0]
+    ny = field.shape[1]
 
-        self.path2file = path2file
+    field_big = np.zeros((2 * ny, 2 * nx))
 
-        self.read()
+    for ix in range(0, nx):
+        for iy in range(0, ny):
+            field_big[ny + iy, nx + ix] = field[iy, ix]
+            field_big[ny + iy, ix] = -field[iy, nx - 1 - ix]
+            field_big[iy, nx + ix] = -field[ny - 1 - iy, ix]
+            field_big[iy, ix] = field[ny - 1 - iy, nx - 1 - ix]
 
-        self.nf = min(self.nx, self.ny)
+    return field_big
 
-        self.a = a
-        self.b = b
-        self.alpha = alpha
-        self.z0 = z0
-        self.deltaz = deltaz
 
-        self.xmin, self.xmax, self.ymin, self.ymax, self.zmin, self.zmax = (
-            self.x[0],
-            self.x[-1],
-            self.y[0],
-            self.y[-1],
-            self.z[0],
-            self.z[-1],
+def fftcoeff(
+    data_bz: np.ndarray[np.float64, np.dtype[np.float64]],
+    nf_max: int,
+) -> np.ndarray[np.float64, np.dtype[np.float64]]:
+    """
+    Given the Seehafer-mirrored photospheric magnetic field data_bz,
+    returns coefficients anm for series expansion of 3D magnetic field.
+    """
+
+    anm = np.zeros((nf_max, nf_max))
+
+    nresol_y = int(data_bz.shape[0])
+    nresol_x = int(data_bz.shape[1])
+
+    signal = np.fft.fftshift(np.fft.fft2(data_bz) / nresol_x / nresol_y)
+
+    for ix in range(0, nresol_x, 2):
+        for iy in range(1, nresol_y, 2):
+            temp = signal[iy, ix]
+            signal[iy, ix] = -temp
+
+    for ix in range(1, nresol_x, 2):
+        for iy in range(0, nresol_y, 2):
+            temp = signal[iy, ix]
+            signal[iy, ix] = -temp
+
+    if nresol_x % 2 == 0:
+        centre_x = int(nresol_x / 2)
+    else:
+        centre_x = int((nresol_x + 1) / 2)
+    if nresol_y % 2 == 0:
+        centre_y = int(nresol_y / 2)
+    else:
+        centre_y = int((nresol_y + 1) / 2)
+
+    for ix in range(nf_max):
+        for iy in range(nf_max):
+            anm[iy, ix] = (
+                -signal[centre_y + iy, centre_x + ix]
+                + signal[centre_y + iy, centre_x - ix]
+                + signal[centre_y - iy, centre_x + ix]
+                - signal[centre_y - iy, centre_x - ix]
+            ).real
+
+    return anm
+
+
+def get_phi_dphi(
+    z_arr: np.ndarray[np.float64, np.dtype[np.float64]],
+    q_arr: np.ndarray[np.float64, np.dtype[np.float64]],
+    p_arr: np.ndarray[np.float64, np.dtype[np.float64]],
+    nf_max: int,
+    nresol_z: int,
+    z0: np.float64 | None = None,
+    deltaz: np.float64 | None = None,
+    kappa: np.float64 | None = None,
+    solution: str = "Asym",
+):
+    phi_arr = np.zeros((nf_max, nf_max, nresol_z))
+    dphidz_arr = np.zeros((nf_max, nf_max, nresol_z))
+
+    if solution == "Asym":
+        assert z0 is not None and deltaz is not None
+
+        for iz, z in enumerate(z_arr):
+            phi_arr[:, :, iz] = phi(z, p_arr, q_arr, z0, deltaz)
+            dphidz_arr[:, :, iz] = dphidz(z, p_arr, q_arr, z0, deltaz)
+
+    elif solution == "Hypergeo":
+
+        assert z0 is not None and deltaz is not None
+
+        for iz, z in enumerate(z_arr):
+            phi_arr[:, :, iz] = phi_hypgeo(z, p_arr, q_arr, z0, deltaz)
+            dphidz_arr[:, :, iz] = dphidz_hypgeo(z, p_arr, q_arr, z0, deltaz)
+
+    elif solution == "Exp":
+
+        assert kappa is not None
+        for iy in range(0, int(nf_max)):
+            for ix in range(0, int(nf_max)):
+                q = q_arr[iy, ix]
+                p = p_arr[iy, ix]
+                for iz in range(0, int(nresol_z)):
+                    z = z_arr[iz]
+                    phi_arr[iy, ix, iz] = phi_low(z, p, q, kappa)
+                    dphidz_arr[iy, ix, iz] = dphidz_low(z, p, q, kappa)
+
+    return phi_arr, dphidz_arr
+
+
+def b3d(field):
+    # Calculate 3d magnetic field data using N+N(2024)
+
+    l = 2.0
+    lx = field.nx * field.px * l
+    ly = field.ny * field.py * l
+    lxn = lx / l
+    lyn = ly / l
+
+    # print(self.px, self.py, self.nx, self.ny)
+
+    # print("length scale", l)
+    # print("length scale x", lx)
+    # print("length scale y", lx)
+    # print("length scale x norm", lxn)
+    # print("length scale y norm", lxn)
+
+    field.x_big = (
+        np.arange(2.0 * field.nx) * 2.0 * field.xmax / (2.0 * field.nx - 1) - field.xmax
+    )
+    field.y_big = (
+        np.arange(2.0 * field.ny) * 2.0 * field.ymax / (2.0 * field.ny - 1) - field.ymax
+    )
+
+    kx = np.arange(field.nf) * np.pi / lxn
+    ky = np.arange(field.nf) * np.pi / lyn
+    ones = 0.0 * np.arange(field.nf) + 1.0
+
+    ky_grid = np.outer(ky, ones)
+    kx_grid = np.outer(ones, kx)
+
+    k2 = np.outer(ky**2, ones) + np.outer(ones, kx**2)
+    k2[0, 0] = (np.pi / lxn) ** 2 + (np.pi / lyn) ** 2
+
+    p = (
+        0.5
+        * field.deltaz
+        * np.sqrt(k2 * (1.0 - field.a - field.a * field.b) - field.alpha**2)
+    )
+    q = (
+        0.5
+        * field.deltaz
+        * np.sqrt(k2 * (1.0 - field.a + field.a * field.b) - field.alpha**2)
+    )
+
+    seehafer = mirror(field.bz)
+
+    anm = np.divide(fftcoeff(seehafer, field.nf), k2)
+
+    phi, dphi = get_phi_dphi(field.z, q, p, field.nf, field.nz, field.z0, field.deltaz)
+
+    b = np.zeros((2 * field.ny, 2 * field.nx, field.nz, 3))
+    dbz = np.zeros((2 * field.ny, 2 * field.nx, field.nz, 3))
+
+    sin_x = np.sin(np.outer(kx, field.x_big))
+    sin_y = np.sin(np.outer(ky, field.y_big))
+    cos_x = np.cos(np.outer(kx, field.x_big))
+    cos_y = np.cos(np.outer(ky, field.y_big))
+
+    # print("k2", k2.shape)
+    # print("phi", phi.shape)
+    # print("anm", anm.shape)
+    # print("siny", sin_y.shape)
+    # print("sinx", sin_x.shape)
+    # print("x big", self.x_big.shape)
+    # print("y big", self.y_big.shape)
+    # print("x", self.x.shape)
+
+    # print("b", b.shape)
+
+    for iz in range(0, field.nz):
+        coeffs = np.multiply(np.multiply(k2, phi[:, :, iz]), anm)
+        b[:, :, iz, 2] = np.matmul(sin_y.T, np.matmul(coeffs, sin_x))
+
+        coeffs1 = np.multiply(np.multiply(anm, dphi[:, :, iz]), ky_grid)
+        coeffs2 = field.alpha * np.multiply(np.multiply(anm, phi[:, :, iz]), kx_grid)
+        b[:, :, iz, 0] = np.matmul(cos_y.T, np.matmul(coeffs1, sin_x)) - np.matmul(
+            sin_y.T, np.matmul(coeffs2, cos_x)
         )
 
-        if self.xmin != 0.0 or self.ymin != 0.0 or self.zmin != 0.0:
-            raise ValueError("Magnetogram not centered at origin.")
-        if not (self.xmax > 0.0 or self.ymax > 0.0 or self.zmax > 0.0):
-            raise ValueError("Magnetogram in wrong quadrant for Seehafer mirroring.")
-
-        self.field = np.zeros((2 * self.ny, 2 * self.nx, self.nz, 3))
-        self.dfield = np.zeros((2 * self.ny, 2 * self.nx, self.nz, 3))
-
-        self.b3d()
-
-    def read(self):
-
-        with open(self.path2file, "rb") as file:
-            shape = np.fromfile(file, count=3, dtype=np.int32)
-            self.nx, self.ny, self.nz = (int(n) for n in shape)
-            pixel = np.fromfile(file, count=3, dtype=np.float64)
-            self.px, self.py, self.pz = (float(p) for p in pixel)
-            self.bz = np.fromfile(
-                file, count=self.nx * self.ny, dtype=np.float64
-            ).reshape((self.ny, self.nx))
-            self.x = np.fromfile(file, count=self.nx, dtype=np.float64)
-            self.y = np.fromfile(file, count=self.ny, dtype=np.float64)
-            self.z = np.fromfile(file, count=self.nz, dtype=np.float64)
-
-    def b3d(self):
-        # Calculate 3d magnetic field data using N+N(2024)
-
-        l = 2.0
-        lx = self.nx * self.px * l
-        ly = self.ny * self.py * l
-        lxn = lx / l
-        lyn = ly / l
-
-        # print(self.px, self.py, self.nx, self.ny)
-
-        # print("length scale", l)
-        # print("length scale x", lx)
-        # print("length scale y", lx)
-        # print("length scale x norm", lxn)
-        # print("length scale y norm", lxn)
-
-        self.x_big = (
-            np.arange(2.0 * self.nx) * 2.0 * self.xmax / (2.0 * self.nx - 1) - self.xmax
-        )
-        self.y_big = (
-            np.arange(2.0 * self.ny) * 2.0 * self.ymax / (2.0 * self.ny - 1) - self.ymax
+        coeffs3 = np.multiply(np.multiply(anm, dphi[:, :, iz]), kx_grid)
+        coeffs4 = field.alpha * np.multiply(np.multiply(anm, phi[:, :, iz]), ky_grid)
+        b[:, :, iz, 1] = np.matmul(sin_y.T, np.matmul(coeffs3, cos_x)) + np.matmul(
+            cos_y.T, np.matmul(coeffs4, sin_x)
         )
 
-        kx = np.arange(self.nf) * np.pi / lxn
-        ky = np.arange(self.nf) * np.pi / lyn
-        ones = 0.0 * np.arange(self.nf) + 1.0
+        coeffs5 = np.multiply(np.multiply(k2, dphi[:, :, iz]), anm)
+        dbz[:, :, iz, 2] = np.matmul(sin_y.T, np.matmul(coeffs5, sin_x))
 
-        ky_grid = np.outer(ky, ones)
-        kx_grid = np.outer(ones, kx)
+        coeffs6 = np.multiply(np.multiply(np.multiply(k2, phi[:, :, iz]), anm), kx_grid)
+        dbz[:, :, iz, 1] = np.matmul(sin_y.T, np.matmul(coeffs6, cos_x))
 
-        k2 = np.outer(ky**2, ones) + np.outer(ones, kx**2)
-        k2[0, 0] = (np.pi / lxn) ** 2 + (np.pi / lyn) ** 2
-
-        p = (
-            0.5
-            * self.deltaz
-            * np.sqrt(k2 * (1.0 - self.a - self.a * self.b) - self.alpha**2)
+        coeffs7 = np.multiply(
+            np.multiply(np.multiply(k2, phi[:, :, iz]), anm),
+            ky_grid,
         )
-        q = (
-            0.5
-            * self.deltaz
-            * np.sqrt(k2 * (1.0 - self.a + self.a * self.b) - self.alpha**2)
-        )
+        dbz[:, :, iz, 0] = np.matmul(cos_y.T, np.matmul(coeffs7, sin_x))
 
-        seehafer = mirror(self.bz)
-
-        anm = np.divide(fftcoeff(seehafer, self.nf), k2)
-
-        phi, dphi = get_phi_dphi(self.z, q, p, self.nf, self.nz, self.z0, self.deltaz)
-
-        b = np.zeros((2 * self.ny, 2 * self.nx, self.nz, 3))
-        dbz = np.zeros((2 * self.ny, 2 * self.nx, self.nz, 3))
-
-        sin_x = np.sin(np.outer(kx, self.x_big))
-        sin_y = np.sin(np.outer(ky, self.y_big))
-        cos_x = np.cos(np.outer(kx, self.x_big))
-        cos_y = np.cos(np.outer(ky, self.y_big))
-
-        # print("k2", k2.shape)
-        # print("phi", phi.shape)
-        # print("anm", anm.shape)
-        # print("siny", sin_y.shape)
-        # print("sinx", sin_x.shape)
-        # print("x big", self.x_big.shape)
-        # print("y big", self.y_big.shape)
-        # print("x", self.x.shape)
-
-        # print("b", b.shape)
-
-        for iz in range(0, self.nz):
-            coeffs = np.multiply(np.multiply(k2, phi[:, :, iz]), anm)
-            b[:, :, iz, 2] = np.matmul(sin_y.T, np.matmul(coeffs, sin_x))
-
-            coeffs1 = np.multiply(np.multiply(anm, dphi[:, :, iz]), ky_grid)
-            coeffs2 = self.alpha * np.multiply(np.multiply(anm, phi[:, :, iz]), kx_grid)
-            b[:, :, iz, 0] = np.matmul(cos_y.T, np.matmul(coeffs1, sin_x)) - np.matmul(
-                sin_y.T, np.matmul(coeffs2, cos_x)
-            )
-
-            coeffs3 = np.multiply(np.multiply(anm, dphi[:, :, iz]), kx_grid)
-            coeffs4 = self.alpha * np.multiply(np.multiply(anm, phi[:, :, iz]), ky_grid)
-            b[:, :, iz, 1] = np.matmul(sin_y.T, np.matmul(coeffs3, cos_x)) + np.matmul(
-                cos_y.T, np.matmul(coeffs4, sin_x)
-            )
-
-            coeffs5 = np.multiply(np.multiply(k2, dphi[:, :, iz]), anm)
-            dbz[:, :, iz, 2] = np.matmul(sin_y.T, np.matmul(coeffs5, sin_x))
-
-            coeffs6 = np.multiply(
-                np.multiply(np.multiply(k2, phi[:, :, iz]), anm), kx_grid
-            )
-            dbz[:, :, iz, 1] = np.matmul(sin_y.T, np.matmul(coeffs6, cos_x))
-
-            coeffs7 = np.multiply(
-                np.multiply(np.multiply(k2, phi[:, :, iz]), anm),
-                ky_grid,
-            )
-            dbz[:, :, iz, 0] = np.matmul(cos_y.T, np.matmul(coeffs7, sin_x))
-
-        self.field = b
-        self.dfield = dbz
-
-    def plot(self):
-
-        self.figure = plt.figure()
-        self.ax = self.figure.add_subplot(111, projection="3d")
-        self.plot_magnetogram()
-        self.find_center()
-        self.plot_fieldlines()
-        plt.show()
-
-    def plot_magnetogram(self):
-
-        bphoto = self.field[:, :, 0, 2]
-
-        x_grid, y_grid = np.meshgrid(self.x_big, self.y_big)
-        self.ax.contourf(
-            x_grid[self.ny : 2 * self.ny, self.nx : 2 * self.nx],
-            y_grid[self.ny : 2 * self.ny, self.nx : 2 * self.nx],
-            bphoto[self.ny : 2 * self.ny, self.nx : 2 * self.nx],
-            1000,
-            # norm=norm,
-            cmap=cmap,
-            offset=0.0,
-        )
-
-        self.ax.set_xlabel("x")
-        self.ax.set_ylabel("y")
-        self.ax.set_zlabel("z")  # type: ignore
-        self.ax.grid(False)
-        self.ax.set_zlim(self.zmin, self.zmax)  # type: ignore
-        self.ax.set_xlim(self.xmin, self.xmax)
-        self.ax.set_ylim(self.ymin, self.ymax)
-        self.ax.set_box_aspect((2, 2, 2))
-
-        self.ax.xaxis._axinfo["tick"]["inward_factor"] = 0  # type : ignore
-        self.ax.xaxis._axinfo["tick"]["outward_factor"] = -0.2  # type : ignore
-        self.ax.yaxis._axinfo["tick"]["inward_factor"] = 0  # type : ignore
-        self.ax.yaxis._axinfo["tick"]["outward_factor"] = -0.2  # type : ignore
-        self.ax.zaxis._axinfo["tick"]["inward_factor"] = 0  # type : ignore
-        self.ax.zaxis._axinfo["tick"]["outward_factor"] = -0.2  # type : ignore
-
-        self.ax.xaxis.pane.fill = False  # type : ignore
-        self.ax.yaxis.pane.fill = False  # type : ignore
-        self.ax.zaxis.pane.fill = False  # type : ignore
-
-        [t.set_va("center") for t in self.ax.get_yticklabels()]
-        [t.set_ha("center") for t in self.ax.get_yticklabels()]
-
-        [t.set_va("top") for t in self.ax.get_xticklabels()]
-        [t.set_ha("center") for t in self.ax.get_xticklabels()]
-
-        [t.set_va("center") for t in self.ax.get_zticklabels()]
-        [t.set_ha("center") for t in self.ax.get_zticklabels()]
-
-        self.ax.view_init(90, -90)  # type: ignore
-
-    def plot_fieldlines(self):
-
-        # x_0 = 1.0 * 10**-8
-        # y_0 = 1.0 * 10**-8
-        # dx = 0.1
-        # dy = 0.1
-        # nlinesmaxx = math.floor(self.xmax / dx)
-        # nlinesmaxy = math.floor(self.ymax / dy)
-
-        h1 = 1.0 / 100.0  # Initial step length for fieldline3D
-        eps = 1.0e-8
-        # Tolerance to which we require point on field line known for fieldline3D
-        hmin = 0.0  # Minimum step length for fieldline3D
-        hmax = 1.0  # Maximum step length for fieldline3D
-
-        # Limit fieldline plot to original data size (rather than Seehafer size)
-        boxedges = np.zeros((2, 3))
-
-        # # Y boundaries must come first, X second due to switched order explained above
-        boxedges[0, 0] = self.ymin
-        boxedges[1, 0] = self.ymax
-        boxedges[0, 1] = self.xmin
-        boxedges[1, 1] = self.xmax
-        boxedges[0, 2] = self.zmin
-        boxedges[1, 2] = self.zmax
-
-        # print(nlinesmaxx, nlinesmaxy)
-        # for ilinesx in range(0, nlinesmaxx):
-        #     for ilinesy in range(0, nlinesmaxy):
-        #         x_start = x_0 + dx * ilinesx
-        #         y_start = y_0 + dy * ilinesy
-
-        #         if self.bz[int(y_start), int(x_start)] < 0.0:
-        #             h1 = -h1
-
-        #         ystart = [y_start, x_start, 0.0]
-        #         # Fieldline3D expects startpt, BField, Row values, Column values so we need to give Y first, then X
-        #         fieldline = fieldline3d(
-        #             ystart,
-        #             self.field,
-        #             y,
-        #             x,
-        #             z,
-        #             h1,
-        #             hmin,
-        #             hmax,
-        #             eps,
-        #             oneway=False,
-        #             boxedge=boxedges,
-        #             gridcoord=False,
-        #             coordsystem="cartesian",
-        #         )  # , periodicity='xy')
-
-        #         # Plot fieldlines
-        #         fieldline_x = np.zeros(len(fieldline))
-        #         fieldline_y = np.zeros(len(fieldline))
-        #         fieldline_z = np.zeros(len(fieldline))
-        #         fieldline_x[:] = fieldline[:, 0]
-        #         fieldline_y[:] = fieldline[:, 1]
-        #         fieldline_z[:] = fieldline[:, 2]
-
-        #         if np.isclose(fieldline_z[-1], 0.0) and np.isclose(fieldline_z[0], 0.0):
-        #             # Need to give row direction first/ Y, then column direction/ X
-        #             self.ax.plot(
-        #                 fieldline_y,
-        #                 fieldline_x,
-        #                 fieldline_z,
-        #                 color=(0.420, 0.502, 1.000),
-        #                 linewidth=0.5,
-        #                 zorder=4000,
-        #             )
-        #         else:
-        #             self.ax.plot(
-        #                 fieldline_y,
-        #                 fieldline_x,
-        #                 fieldline_z,
-        #                 color=(0.420, 0.502, 1.000),
-        #                 linewidth=0.5,
-        #                 zorder=4000,
-        #             )
-
-        nlinesmaxr = 2
-        nlinesmaxphi = 5
-        # x_0 = -1.2 / np.pi + 1.0
-        # y_0 = -1.2 / np.pi + 1.0
-        dr = 1.0 / 2.0 * np.sqrt(1 / 10.0) / (nlinesmaxr + 1.0)
-        dphi = 2.0 * np.pi / nlinesmaxphi
-
-        # list = [
-        #     (1.0, -1.0),
-        #     (-1.2, -1.2),
-        #     (-2.4, 1.9),
-        #     (2.1, -1.6),
-        #     (-1.5, 1.2),
-        #     (2.5, 0.0),
-        #     (0.0, -2.0),
-        #     (-1.0, -2.4),
-        #     (-1.0, 2.4),
-        # ]
-
-        ssx = self.sinksx + self.sourcesx
-        ssy = self.sinksy + self.sourcesy
-        list = [tuple([ssx[i], ssy[i]]) for i in range(len(ssx))]
-
-        print(list)
-
-        for xx, yy in list:
-            y_0 = yy  # / np.pi + 1.0
-            x_0 = xx  # / np.pi + 1.0
-
-            for ilinesr in range(0, nlinesmaxr):
-                for ilinesphi in range(0, nlinesmaxphi):
-                    x_start = x_0 + (ilinesr + 1.0) * dr * np.cos(ilinesphi * dphi)
-                    y_start = y_0 + (ilinesr + 1.0) * dr * np.sin(ilinesphi * dphi)
-
-                    if self.bz[int(y_start), int(x_start)] < 0.0:
-                        h1 = -h1
-
-                    ystart = [y_start, x_start, 0.0]
-                    # ax.scatter(y_start, x_start, 0.0, s=0.5)
-                    # Fieldline3D expects startpt, BField, Row values, Column values so we need to give Y first, then X
-                    fieldline = fieldline3d(
-                        ystart,
-                        self.field,
-                        self.y_big,
-                        self.x_big,
-                        self.z,
-                        h1,
-                        hmin,
-                        hmax,
-                        eps,
-                        oneway=False,
-                        boxedge=boxedges,
-                        gridcoord=False,
-                        coordsystem="cartesian",
-                    )  # , periodicity='xy')
-
-                    fieldline_x = np.zeros(len(fieldline))
-                    fieldline_y = np.zeros(len(fieldline))
-                    fieldline_z = np.zeros(len(fieldline))
-                    fieldline_x[:] = fieldline[:, 1]
-                    fieldline_y[:] = fieldline[:, 0]
-                    fieldline_z[:] = fieldline[:, 2]
-
-                    self.ax.plot(
-                        fieldline_x,
-                        fieldline_y,
-                        fieldline_z,
-                        color=(0.420, 0.502, 1.000),
-                        linewidth=0.5,
-                        zorder=4000,
-                    )
-
-    def find_center(self):
-
-        neighborhood_size = 70
-        threshold = 1.5
-
-        data_max = maximum_filter(self.bz, neighborhood_size)
-        maxima = self.bz == data_max
-        data_min = minimum_filter(self.bz, neighborhood_size)
-        minima = self.bz == data_min
-        diff = (data_max - data_min) > threshold
-        maxima[diff == 0] = 0
-        minima[diff == 0] = 0
-
-        labeled_sinks, num_objects_sinks = label(minima)
-        slices_sinks = find_objects(labeled_sinks)
-        x_sinks, y_sinks = [], []
-        labeled_sources, num_objects_sources = label(maxima)
-        slices_sources = find_objects(labeled_sources)
-        x_sources, y_sources = [], []
-
-        for dy, dx in slices_sinks:
-            x_center = (dx.start + dx.stop - 1) / 2
-            x_sinks.append(x_center / (self.nx / self.xmax))
-            y_center = (dy.start + dy.stop - 1) / 2
-            y_sinks.append(y_center / (self.ny / self.ymax))
-
-        for dy, dx in slices_sources:
-            x_center = (dx.start + dx.stop - 1) / 2
-            x_sources.append(x_center / (self.nx / self.xmax))
-            y_center = (dy.start + dy.stop - 1) / 2
-            y_sources.append(y_center / (self.ny / self.ymax))
-
-        self.sinksx = x_sinks
-        self.sinksy = y_sinks
-        self.sourcesx = x_sources
-        self.sourcesy = y_sources
-
-    def plot_ss(self):
-
-        x_plot = np.outer(self.y, np.ones(self.nx))
-        y_plot = np.outer(self.x, np.ones(self.ny)).T
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        # ax.grid(color="white", linestyle="dotted", linewidth=0.5)
-        ax.contourf(y_plot, x_plot, self.bz, 1000, cmap=cmap)
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
-        plt.tick_params(direction="in", length=2, width=0.5)
-        ax.set_box_aspect(self.ymax / self.xmax)
-        for i in range(0, len(self.sinksx)):
-
-            xx = self.sinksx[i]
-            yy = self.sinksy[i]
-            ax.scatter(xx, yy, marker="x", c=c2)
-
-        for i in range(0, len(self.sourcesx)):
-
-            xx = self.sourcesx[i]
-            yy = self.sourcesy[i]
-            ax.scatter(xx, yy, marker="x", c=c1)
-
-        sinks_label = mpatches.Patch(color=c2, label="Sinks")
-        sources_label = mpatches.Patch(color=c1, label="Sources")
-
-        plt.legend(handles=[sinks_label, sources_label], frameon=False)
-
-        plt.show()
+    field.field = b
+    field.dfield = dbz
