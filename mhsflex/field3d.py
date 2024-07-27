@@ -4,6 +4,9 @@ from matplotlib import rc, colors
 import math
 from mhsflex.bfieldmodel import mirror, fftcoeff, get_phi_dphi
 from msat.pyvis.fieldline3d import fieldline3d
+from scipy.signal import argrelextrema
+from scipy.ndimage import maximum_filter, label, find_objects, minimum_filter
+import matplotlib.patches as mpatches
 
 rc("font", **{"family": "serif", "serif": ["Times"]})
 rc("text", usetex=True)
@@ -11,13 +14,13 @@ rc("text", usetex=True)
 cmap = colors.LinearSegmentedColormap.from_list(
     "cmap",
     (
-        # Edit this gradient at https://eltos.github.io/gradient/#cmap=000000-A8A8A8-FFFFFF
         (0.000, (0.000, 0.000, 0.000)),
         (0.500, (0.659, 0.659, 0.659)),
         (1.000, (1.000, 1.000, 1.000)),
     ),
 )
-
+c1 = (1.000, 0.224, 0.376)
+c2 = (0.420, 0.502, 1.000)
 norm = colors.SymLogNorm(50, vmin=-7.5e2, vmax=7.5e2)
 
 
@@ -31,10 +34,6 @@ class Field3d:
         alpha,
         z0,
         deltaz,
-        model: str = "",
-        figure=True,
-        fieldlines="all",
-        footpoints="grid",
     ):
 
         self.path2file = path2file
@@ -43,7 +42,6 @@ class Field3d:
 
         self.nf = min(self.nx, self.ny)
 
-        self.model = model
         self.a = a
         self.b = b
         self.alpha = alpha
@@ -191,6 +189,7 @@ class Field3d:
         self.figure = plt.figure()
         self.ax = self.figure.add_subplot(111, projection="3d")
         self.plot_magnetogram()
+        self.find_center()
         self.plot_fieldlines()
         plt.show()
 
@@ -238,7 +237,7 @@ class Field3d:
         [t.set_va("center") for t in self.ax.get_zticklabels()]
         [t.set_ha("center") for t in self.ax.get_zticklabels()]
 
-        self.ax.view_init(0, -90)  # type: ignore
+        self.ax.view_init(90, -90)  # type: ignore
 
     def plot_fieldlines(self):
 
@@ -328,21 +327,28 @@ class Field3d:
         dr = 1.0 / 2.0 * np.sqrt(1 / 10.0) / (nlinesmaxr + 1.0)
         dphi = 2.0 * np.pi / nlinesmaxphi
 
-        list = [
-            (1.0, -1.0),
-            (-1.2, -1.2),
-            (-2.4, 1.9),
-            (2.1, -1.6),
-            (-1.5, 1.2),
-            (2.5, 0.0),
-            (0.0, -2.0),
-            (-1.0, -2.4),
-            (-1.0, 2.4),
-        ]
+        # list = [
+        #     (1.0, -1.0),
+        #     (-1.2, -1.2),
+        #     (-2.4, 1.9),
+        #     (2.1, -1.6),
+        #     (-1.5, 1.2),
+        #     (2.5, 0.0),
+        #     (0.0, -2.0),
+        #     (-1.0, -2.4),
+        #     (-1.0, 2.4),
+        # ]
+
+        ssx = self.sinksx + self.sourcesx
+        ssy = self.sinksy + self.sourcesy
+        list = [tuple([ssx[i], ssy[i]]) for i in range(len(ssx))]
+
+        print(list)
 
         for xx, yy in list:
-            y_0 = yy / np.pi + 1.0
-            x_0 = xx / np.pi + 1.0
+            y_0 = yy  # / np.pi + 1.0
+            x_0 = xx  # / np.pi + 1.0
+
             for ilinesr in range(0, nlinesmaxr):
                 for ilinesphi in range(0, nlinesmaxphi):
                     x_start = x_0 + (ilinesr + 1.0) * dr * np.cos(ilinesphi * dphi)
@@ -385,3 +391,72 @@ class Field3d:
                         linewidth=0.5,
                         zorder=4000,
                     )
+
+    def find_center(self):
+
+        neighborhood_size = 70
+        threshold = 1.5
+
+        data_max = maximum_filter(self.bz, neighborhood_size)
+        maxima = self.bz == data_max
+        data_min = minimum_filter(self.bz, neighborhood_size)
+        minima = self.bz == data_min
+        diff = (data_max - data_min) > threshold
+        maxima[diff == 0] = 0
+        minima[diff == 0] = 0
+
+        labeled_sinks, num_objects_sinks = label(minima)
+        slices_sinks = find_objects(labeled_sinks)
+        x_sinks, y_sinks = [], []
+        labeled_sources, num_objects_sources = label(maxima)
+        slices_sources = find_objects(labeled_sources)
+        x_sources, y_sources = [], []
+
+        for dy, dx in slices_sinks:
+            x_center = (dx.start + dx.stop - 1) / 2
+            x_sinks.append(x_center / (self.nx / self.xmax))
+            y_center = (dy.start + dy.stop - 1) / 2
+            y_sinks.append(y_center / (self.ny / self.ymax))
+
+        for dy, dx in slices_sources:
+            x_center = (dx.start + dx.stop - 1) / 2
+            x_sources.append(x_center / (self.nx / self.xmax))
+            y_center = (dy.start + dy.stop - 1) / 2
+            y_sources.append(y_center / (self.ny / self.ymax))
+
+        self.sinksx = x_sinks
+        self.sinksy = y_sinks
+        self.sourcesx = x_sources
+        self.sourcesy = y_sources
+
+    def plot_ss(self):
+
+        x_plot = np.outer(self.y, np.ones(self.nx))
+        y_plot = np.outer(self.x, np.ones(self.ny)).T
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        # ax.grid(color="white", linestyle="dotted", linewidth=0.5)
+        ax.contourf(y_plot, x_plot, self.bz, 1000, cmap=cmap)
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+        plt.tick_params(direction="in", length=2, width=0.5)
+        ax.set_box_aspect(self.ymax / self.xmax)
+        for i in range(0, len(self.sinksx)):
+
+            xx = self.sinksx[i]
+            yy = self.sinksy[i]
+            ax.scatter(xx, yy, marker="x", c=c2)
+
+        for i in range(0, len(self.sourcesx)):
+
+            xx = self.sourcesx[i]
+            yy = self.sourcesy[i]
+            ax.scatter(xx, yy, marker="x", c=c1)
+
+        sinks_label = mpatches.Patch(color=c2, label="Sinks")
+        sources_label = mpatches.Patch(color=c1, label="Sources")
+
+        plt.legend(handles=[sinks_label, sources_label], frameon=False)
+
+        plt.show()
