@@ -18,6 +18,8 @@ cmap = colors.LinearSegmentedColormap.from_list(
     ),
 )
 
+norm = colors.SymLogNorm(50, vmin=-7.5e2, vmax=7.5e2)
+
 
 class Field3d:
 
@@ -35,27 +37,11 @@ class Field3d:
         footpoints="grid",
     ):
 
-        with open(path2file, "rb") as file:
-            shape = np.fromfile(file, count=3, dtype=np.int32)
-            self.nx, self.ny, self.nz = (int(n) for n in shape)
-            pixel = np.fromfile(file, count=3, dtype=np.float64)
-            self.px, self.py, self.pz = (float(p) for p in pixel)
-            self.bz = np.fromfile(
-                file, count=self.nx * self.ny, dtype=np.float64
-            ).reshape((self.ny, self.nx))
-            self.x = np.fromfile(file, count=self.nx, dtype=np.float64)
-            self.y = np.fromfile(file, count=self.ny, dtype=np.float64)
-            self.z = np.fromfile(file, count=self.nz, dtype=np.float64)
+        self.path2file = path2file
+
+        self.read()
 
         self.nf = min(self.nx, self.ny)
-
-        # print(self.nx)
-        # print(self.ny)
-        # print(self.nz)
-        # print(self.px)
-        # print(self.py)
-        # print(self.pz)
-        # print(self.bz)
 
         self.model = model
         self.a = a
@@ -78,38 +64,55 @@ class Field3d:
         if not (self.xmax > 0.0 or self.ymax > 0.0 or self.zmax > 0.0):
             raise ValueError("Magnetogram in wrong quadrant for Seehafer mirroring.")
 
-        self.field = np.zeros((2 * self.nx, 2 * self.ny, self.nz, 3))
-        self.dfield = np.zeros((2 * self.nx, 2 * self.ny, self.nz, 3))
+        self.field = np.zeros((2 * self.ny, 2 * self.nx, self.nz, 3))
+        self.dfield = np.zeros((2 * self.ny, 2 * self.nx, self.nz, 3))
+
         self.b3d()
 
-        if figure is True:
+    def read(self):
 
-            self.figure = plt.figure()
-            self.ax = self.figure.add_subplot(111, projection="3d")
-            self.plot_magnetogram()
-            self.plot_fieldlines()
+        with open(self.path2file, "rb") as file:
+            shape = np.fromfile(file, count=3, dtype=np.int32)
+            self.nx, self.ny, self.nz = (int(n) for n in shape)
+            pixel = np.fromfile(file, count=3, dtype=np.float64)
+            self.px, self.py, self.pz = (float(p) for p in pixel)
+            self.bz = np.fromfile(
+                file, count=self.nx * self.ny, dtype=np.float64
+            ).reshape((self.ny, self.nx))
+            self.x = np.fromfile(file, count=self.nx, dtype=np.float64)
+            self.y = np.fromfile(file, count=self.ny, dtype=np.float64)
+            self.z = np.fromfile(file, count=self.nz, dtype=np.float64)
 
-        plt.show()
-
-    def b3d(self, *args, **kwargs):
+    def b3d(self):
         # Calculate 3d magnetic field data using N+N(2024)
 
         l = 2.0
-        lx = 2.0 * self.nx * self.px * l
-        ly = 2.0 * self.ny * self.px * l
+        lx = self.nx * self.px * l
+        ly = self.ny * self.py * l
         lxn = lx / l
         lyn = ly / l
 
-        x = np.arange(2.0 * self.nx) * 2.0 * self.xmax / (2.0 * self.nx - 1) - self.xmax
-        y = np.arange(2.0 * self.ny) * 2.0 * self.ymax / (2.0 * self.ny - 1) - self.ymax
-        z = np.arange(self.nz) * self.zmax / (self.nz - 1)
+        # print(self.px, self.py, self.nx, self.ny)
+
+        # print("length scale", l)
+        # print("length scale x", lx)
+        # print("length scale y", lx)
+        # print("length scale x norm", lxn)
+        # print("length scale y norm", lxn)
+
+        self.x_big = (
+            np.arange(2.0 * self.nx) * 2.0 * self.xmax / (2.0 * self.nx - 1) - self.xmax
+        )
+        self.y_big = (
+            np.arange(2.0 * self.ny) * 2.0 * self.ymax / (2.0 * self.ny - 1) - self.ymax
+        )
 
         kx = np.arange(self.nf) * np.pi / lxn
         ky = np.arange(self.nf) * np.pi / lyn
         ones = 0.0 * np.arange(self.nf) + 1.0
 
-        kx_grid = np.outer(ones, kx)
         ky_grid = np.outer(ky, ones)
+        kx_grid = np.outer(ones, kx)
 
         k2 = np.outer(ky**2, ones) + np.outer(ones, kx**2)
         k2[0, 0] = (np.pi / lxn) ** 2 + (np.pi / lyn) ** 2
@@ -129,15 +132,26 @@ class Field3d:
 
         anm = np.divide(fftcoeff(seehafer, self.nf), k2)
 
-        phi, dphi = get_phi_dphi(z, q, p, self.nf, self.nz, self.z0, self.deltaz)
+        phi, dphi = get_phi_dphi(self.z, q, p, self.nf, self.nz, self.z0, self.deltaz)
 
         b = np.zeros((2 * self.ny, 2 * self.nx, self.nz, 3))
         dbz = np.zeros((2 * self.ny, 2 * self.nx, self.nz, 3))
 
-        sin_x = np.sin(np.outer(kx, x))
-        sin_y = np.sin(np.outer(ky, y))
-        cos_x = np.cos(np.outer(kx, x))
-        cos_y = np.cos(np.outer(ky, y))
+        sin_x = np.sin(np.outer(kx, self.x_big))
+        sin_y = np.sin(np.outer(ky, self.y_big))
+        cos_x = np.cos(np.outer(kx, self.x_big))
+        cos_y = np.cos(np.outer(ky, self.y_big))
+
+        # print("k2", k2.shape)
+        # print("phi", phi.shape)
+        # print("anm", anm.shape)
+        # print("siny", sin_y.shape)
+        # print("sinx", sin_x.shape)
+        # print("x big", self.x_big.shape)
+        # print("y big", self.y_big.shape)
+        # print("x", self.x.shape)
+
+        # print("b", b.shape)
 
         for iz in range(0, self.nz):
             coeffs = np.multiply(np.multiply(k2, phi[:, :, iz]), anm)
@@ -172,11 +186,28 @@ class Field3d:
         self.field = b
         self.dfield = dbz
 
+    def plot(self):
+
+        self.figure = plt.figure()
+        self.ax = self.figure.add_subplot(111, projection="3d")
+        self.plot_magnetogram()
+        self.plot_fieldlines()
+        plt.show()
+
     def plot_magnetogram(self):
 
-        x_grid, y_grid = np.meshgrid(self.x, self.y)
+        bphoto = self.field[:, :, 0, 2]
 
-        self.ax.contourf(x_grid, y_grid, self.bz, 1000, cmap=cmap, offset=0.0)
+        x_grid, y_grid = np.meshgrid(self.x_big, self.y_big)
+        self.ax.contourf(
+            x_grid[self.ny : 2 * self.ny, self.nx : 2 * self.nx],
+            y_grid[self.ny : 2 * self.ny, self.nx : 2 * self.nx],
+            bphoto[self.ny : 2 * self.ny, self.nx : 2 * self.nx],
+            1000,
+            # norm=norm,
+            cmap=cmap,
+            offset=0.0,
+        )
 
         self.ax.set_xlabel("x")
         self.ax.set_ylabel("y")
@@ -185,6 +216,7 @@ class Field3d:
         self.ax.set_zlim(self.zmin, self.zmax)  # type: ignore
         self.ax.set_xlim(self.xmin, self.xmax)
         self.ax.set_ylim(self.ymin, self.ymax)
+        self.ax.set_box_aspect((2, 2, 2))
 
         self.ax.xaxis._axinfo["tick"]["inward_factor"] = 0  # type : ignore
         self.ax.xaxis._axinfo["tick"]["outward_factor"] = -0.2  # type : ignore
@@ -206,20 +238,22 @@ class Field3d:
         [t.set_va("center") for t in self.ax.get_zticklabels()]
         [t.set_ha("center") for t in self.ax.get_zticklabels()]
 
+        self.ax.view_init(0, -90)  # type: ignore
+
     def plot_fieldlines(self):
 
-        x_0 = 1.0 * 10**-8
-        y_0 = 1.0 * 10**-8
-        dx = 0.1
-        dy = 0.1
-        nlinesmaxx = math.floor(self.xmax / dx)
-        nlinesmaxy = math.floor(self.ymax / dy)
+        # x_0 = 1.0 * 10**-8
+        # y_0 = 1.0 * 10**-8
+        # dx = 0.1
+        # dy = 0.1
+        # nlinesmaxx = math.floor(self.xmax / dx)
+        # nlinesmaxy = math.floor(self.ymax / dy)
 
-        h1 = 2.0 / 100.0  # Initial step length for fieldline3D
+        h1 = 1.0 / 100.0  # Initial step length for fieldline3D
         eps = 1.0e-8
         # Tolerance to which we require point on field line known for fieldline3D
         hmin = 0.0  # Minimum step length for fieldline3D
-        hmax = 2.0  # Maximum step length for fieldline3D
+        hmax = 1.0  # Maximum step length for fieldline3D
 
         # Limit fieldline plot to original data size (rather than Seehafer size)
         boxedges = np.zeros((2, 3))
@@ -231,10 +265,6 @@ class Field3d:
         boxedges[1, 1] = self.xmax
         boxedges[0, 2] = self.zmin
         boxedges[1, 2] = self.zmax
-
-        x = np.arange(self.nx) * (self.xmax - self.xmin) / (self.nx - 1) + self.xmin
-        y = np.arange(self.ny) * (self.ymax - self.ymin) / (self.ny - 1) + self.ymin
-        z = np.arange(self.nz) * (self.zmax - self.zmin) / (self.nz - 1) + self.zmin
 
         # print(nlinesmaxx, nlinesmaxy)
         # for ilinesx in range(0, nlinesmaxx):
@@ -327,9 +357,9 @@ class Field3d:
                     fieldline = fieldline3d(
                         ystart,
                         self.field,
-                        y,
-                        x,
-                        z,
+                        self.y_big,
+                        self.x_big,
+                        self.z,
                         h1,
                         hmin,
                         hmax,

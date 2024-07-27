@@ -283,6 +283,8 @@ def magnetic_field(
     length_scale_x = 2.0 * nresol_x * pixelsize_x * L
     length_scale_y = 2.0 * nresol_y * pixelsize_y * L
 
+    print(pixelsize_x, pixelsize_y, nresol_x, nresol_y)
+
     length_scale_x_norm = length_scale_x / length_scale
     length_scale_y_norm = length_scale_y / length_scale
 
@@ -302,6 +304,9 @@ def magnetic_field(
     x_arr = np.arange(2.0 * nresol_x) * 2.0 * xmax / (2.0 * nresol_x - 1) - xmax
     y_arr = np.arange(2.0 * nresol_y) * 2.0 * ymax / (2.0 * nresol_y - 1) - ymax
     z_arr = np.arange(nresol_z) * (zmax - zmin) / (nresol_z - 1) + zmin
+
+    print("xarr", x_arr.shape)
+    print("y_arr", y_arr.shape)
 
     ratiodzls = deltaz  # Normalised deltaz
 
@@ -327,10 +332,18 @@ def magnetic_field(
         np.pi / length_scale_y_norm
     ) ** 2
 
+    print("kx", kx_arr.shape)
+    print("ky", ky_arr.shape)
+
     p_arr = 0.5 * ratiodzls * np.sqrt(k2_arr * (1.0 - a - a * b) - alpha**2)
     q_arr = 0.5 * ratiodzls * np.sqrt(k2_arr * (1.0 - a + a * b) - alpha**2)
 
+    print("p_arr", p_arr.shape)
+    print("q_arr", q_arr.shape)
+
     anm = np.divide(fft_coeff_seehafer(data_bz_seehafer, nf_max), k2_arr)
+
+    print("anm", anm.shape)
 
     phi_arr, dphidz_arr = get_phi_dphi(
         z_arr,
@@ -343,8 +356,10 @@ def magnetic_field(
         solution="Asym",
     )
 
-    b_arr = np.zeros((2 * nresol_y, 2 * nresol_x, nresol_z, 3))
+    print("phi", phi_arr.shape)
+    print("dphi", dphidz_arr.shape)
 
+    b_arr = np.zeros((2 * nresol_y, 2 * nresol_x, nresol_z, 3))
     bz_derivs = np.zeros((2 * nresol_y, 2 * nresol_x, nresol_z, 3))
 
     sin_x = np.sin(np.outer(kx_arr, x_arr))
