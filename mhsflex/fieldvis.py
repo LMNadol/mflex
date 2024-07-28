@@ -77,6 +77,11 @@ class Field3d:
             np.arange(2.0 * self.ny) * 2.0 * self.ymax / (2.0 * self.ny - 1) - self.ymax
         )
 
+        self.sinks = self.bz.copy()
+        self.sources = self.bz.copy()
+
+        self.detect_footpoints()
+
         b3d(self)
 
     def read(self):
@@ -100,8 +105,7 @@ class Field3d:
         self.plot_magnetogram()
 
         if footpoints == 1:
-            self.find_center()
-            self.plot_fieldlines_ss(view)
+            self.plot_fieldlines_footpoints(view)
 
         if footpoints == 0:
             self.plot_fieldlines_grid(view)
@@ -205,7 +209,7 @@ class Field3d:
 
         self.ax.view_init(90, -90)  # type: ignore
 
-    def plot_fieldlines_ss(self, view):
+    def plot_fieldlines_footpoints(self, view):
 
         # x_0 = 1.0 * 10**-8
         # y_0 = 1.0 * 10**-8
@@ -236,17 +240,12 @@ class Field3d:
         dr = 1.0 / 2.0 * np.sqrt(1 / 10.0) / (nlinesmaxr + 1.0)
         dphi = 2.0 * np.pi / nlinesmaxphi
 
-        ssx = self.sinksx + self.sourcesx
-        ssy = self.sinksy + self.sourcesy
-        list = [tuple([ssx[i], ssy[i]]) for i in range(len(ssx))]
+        for ix in range(0, self.nx, int(self.nx / 30)):
+            for iy in range(0, self.ny, int(self.nx / 30)):
+                if self.sources[iy, ix] != 0 or self.sinks[iy, ix] != 0:
 
-        for xx, yy in list:
-            y_0 = yy
-            x_0 = xx
-            for ilinesr in range(0, nlinesmaxr):
-                for ilinesphi in range(0, nlinesmaxphi):
-                    x_start = x_0 + (ilinesr + 1.0) * dr * np.cos(ilinesphi * dphi)
-                    y_start = y_0 + (ilinesr + 1.0) * dr * np.sin(ilinesphi * dphi)
+                    x_start = ix / (self.nx / self.xmax)
+                    y_start = iy / (self.ny / self.ymax)
 
                     if self.bz[int(y_start), int(x_start)] < 0.0:
                         h1 = -h1
@@ -366,76 +365,119 @@ class Field3d:
                         zorder=4000,
                     )
 
-    def find_center(self):
+    # def find_center(self):
 
-        neighborhood_size = 70
-        threshold = 1.5
+    #     neighborhood_size = 70
+    #     threshold = 1.0
 
-        data_max = maximum_filter(self.bz, neighborhood_size)  # mode ='reflect'?
-        maxima = self.bz == data_max
-        data_min = minimum_filter(self.bz, neighborhood_size)
-        minima = self.bz == data_min
+    #     data_max = maximum_filter(self.bz, neighborhood_size)  # mode ='reflect'
+    #     maxima = self.bz == data_max
+    #     data_min = minimum_filter(self.bz, neighborhood_size)
+    #     minima = self.bz == data_min
 
-        diff = (data_max - data_min) > threshold
-        maxima[diff == 0] = 0
-        minima[diff == 0] = 0
+    #     diff = (data_max - data_min) > threshold
+    #     maxima[diff == 0] = 0
+    #     minima[diff == 0] = 0
 
-        labeled_sources, num_objects_sources = label(maxima)
-        slices_sources = find_objects(labeled_sources)
-        x_sources, y_sources = [], []
+    #     labeled_sources, num_objects_sources = label(maxima)
+    #     slices_sources = find_objects(labeled_sources)
+    #     x_sources, y_sources = [], []
 
-        labeled_sinks, num_objects_sinks = label(minima)
-        slices_sinks = find_objects(labeled_sinks)
-        x_sinks, y_sinks = [], []
+    #     labeled_sinks, num_objects_sinks = label(minima)
+    #     slices_sinks = find_objects(labeled_sinks)
+    #     x_sinks, y_sinks = [], []
 
-        for dy, dx in slices_sources:
-            x_center = (dx.start + dx.stop - 1) / 2
-            x_sources.append(x_center / (self.nx / self.xmax))
-            y_center = (dy.start + dy.stop - 1) / 2
-            y_sources.append(y_center / (self.ny / self.ymax))
+    #     for dy, dx in slices_sources:
+    #         x_center = (dx.start + dx.stop - 1) / 2
+    #         x_sources.append(x_center / (self.nx / self.xmax))
+    #         y_center = (dy.start + dy.stop - 1) / 2
+    #         y_sources.append(y_center / (self.ny / self.ymax))
 
-        for dy, dx in slices_sinks:
-            x_center = (dx.start + dx.stop - 1) / 2
-            x_sinks.append(x_center / (self.nx / self.xmax))
-            y_center = (dy.start + dy.stop - 1) / 2
-            y_sinks.append(y_center / (self.ny / self.ymax))
+    #     for dy, dx in slices_sinks:
+    #         x_center = (dx.start + dx.stop - 1) / 2
+    #         x_sinks.append(x_center / (self.nx / self.xmax))
+    #         y_center = (dy.start + dy.stop - 1) / 2
+    #         y_sinks.append(y_center / (self.ny / self.ymax))
 
-        self.sourcesx = x_sources
-        self.sourcesy = y_sources
+    #     self.sourcesx = x_sources
+    #     self.sourcesy = y_sources
 
-        self.sinksx = x_sinks
-        self.sinksy = y_sinks
+    #     self.sinksx = x_sinks
+    #     self.sinksy = y_sinks
 
-    def plot_ss(self):
+    # def plot_ss(self):
 
-        x_plot = np.outer(self.y, np.ones(self.nx))
-        y_plot = np.outer(self.x, np.ones(self.ny)).T
+    #     x_plot = np.outer(self.y, np.ones(self.nx))
+    #     y_plot = np.outer(self.x, np.ones(self.ny)).T
+
+    #     fig = plt.figure()
+    #     ax = fig.add_subplot(111)
+    #     # ax.grid(color="white", linestyle="dotted", linewidth=0.5)
+    #     ax.contourf(y_plot, x_plot, self.bz, 1000, cmap=cmap)
+    #     ax.set_xlabel("x")
+    #     ax.set_ylabel("y")
+    #     plt.tick_params(direction="in", length=2, width=0.5)
+    #     ax.set_box_aspect(self.ymax / self.xmax)
+
+    #     for i in range(0, len(self.sinksx)):
+
+    #         xx = self.sinksx[i]
+    #         yy = self.sinksy[i]
+    #         ax.scatter(xx, yy, marker="x", color=c2)
+
+    #     for i in range(0, len(self.sourcesx)):
+
+    #         xx = self.sourcesx[i]
+    #         yy = self.sourcesy[i]
+    #         ax.scatter(xx, yy, marker="x", color=c1)
+
+    #     sinks_label = mpatches.Patch(color=c2, label="Sinks")
+    #     sources_label = mpatches.Patch(color=c1, label="Sources")
+
+    #     plt.legend(handles=[sinks_label, sources_label], frameon=False)
+
+    #     plt.show()
+
+    def detect_footpoints(self):
+
+        maxmask = self.sources < self.sources.max() * 0.4
+        self.sources[maxmask != 0] = 0
+
+        minmask = self.sinks < self.sinks.min() * 0.4
+        self.sinks[minmask == 0] = 0
+
+    def show_footpoints(self):
 
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        # ax.grid(color="white", linestyle="dotted", linewidth=0.5)
-        ax.contourf(y_plot, x_plot, self.bz, 1000, cmap=cmap)
+        ax.contourf(
+            np.outer(self.y, np.ones(self.ny)).T,
+            np.outer(self.y, np.ones(self.nx)),
+            self.bz,
+            1000,
+            cmap=cmap,
+        )
         ax.set_xlabel("x")
         ax.set_ylabel("y")
         plt.tick_params(direction="in", length=2, width=0.5)
         ax.set_box_aspect(self.ymax / self.xmax)
 
-        for i in range(0, len(self.sinksx)):
-
-            xx = self.sinksx[i]
-            yy = self.sinksy[i]
-            ax.scatter(xx, yy, marker="x", color=c2)
-
-        for i in range(0, len(self.sourcesx)):
-
-            xx = self.sourcesx[i]
-            yy = self.sourcesy[i]
-            ax.scatter(xx, yy, marker="x", color=c1)
-
-        sinks_label = mpatches.Patch(color=c2, label="Sinks")
-        sources_label = mpatches.Patch(color=c1, label="Sources")
-
-        plt.legend(handles=[sinks_label, sources_label], frameon=False)
+        for ix in range(0, self.nx, int(self.nx / 50)):
+            for iy in range(0, self.ny, int(self.nx / 50)):
+                if self.sources[iy, ix] != 0:
+                    ax.scatter(
+                        ix / (self.nx / self.xmax),
+                        iy / (self.ny / self.ymax),
+                        color=c2,
+                        s=0.3,
+                    )
+                if self.sinks[iy, ix] != 0:
+                    ax.scatter(
+                        ix / (self.nx / self.xmax),
+                        iy / (self.ny / self.ymax),
+                        color=c2,
+                        s=0.3,
+                    )
 
         plt.show()
 
