@@ -10,7 +10,15 @@ from scipy.ndimage import maximum_filter, label, find_objects, minimum_filter
 from msat.pyvis.fieldline3d import fieldline3d
 
 from mhsflex.field3d import b3d
-from mhsflex.pp import btemp, bpressure, bdensity
+from mhsflex.pp import (
+    btemp,
+    bpressure,
+    bdensity,
+    dpressure,
+    ddensity,
+    fpressure,
+    fdensity,
+)
 
 
 rc("font", **{"family": "serif", "serif": ["Times"]})
@@ -27,6 +35,16 @@ cmap = colors.LinearSegmentedColormap.from_list(
 c1 = (1.000, 0.224, 0.376)
 c2 = (0.420, 0.502, 1.000)
 norm = colors.SymLogNorm(50, vmin=-7.5e2, vmax=7.5e2)
+
+t_photosphere = 5600.0  # Photospheric temperature
+t_corona = 2.0 * 10.0**6  # Coronal temperature
+
+g_solar = 272.2  # kg/m^3
+kB = 1.380649 * 10**-23  # Boltzmann constant in Joule/ Kelvin = kg m^2/(Ks^2)
+mbar = 1.67262 * 10**-27  # mean molecular weight (proton mass)
+rho0 = 2.7 * 10**-4  # plasma density at z = 0 in kg/(m^3)
+p0 = t_photosphere * kB * rho0 / mbar  # plasma pressure in kg/(s^2 m)
+mu0 = 1.25663706 * 10**-6  # permeability of free space in mkg/(s^2A^2)
 
 
 class Field3d:
@@ -52,6 +70,20 @@ class Field3d:
         self.alpha = alpha
         self.z0 = z0
         self.deltaz = deltaz
+
+        t0 = (t_photosphere + t_corona * np.tanh(self.z0 / self.deltaz)) / (
+            1.0 + np.tanh(self.z0 / self.deltaz)
+        )
+        h = kB * t0 / (mbar * g_solar) * 10**-6
+
+        self.b0 = (
+            self.bz.max()
+        )  # Gauss background magnetic field strength in 10^-4 kg/(s^2A) = 10^-4 T
+        self.pB0 = (self.b0 * 10**-4) ** 2 / (
+            2 * mu0
+        )  # magnetic pressure b0**2 / 2mu0 in kg/(s^2m)
+        self.beta0 = p0 / self.pB0  # Plasma Beta, ration plasma to magnetic pressure
+        self.h_photo = h / t0 * t_photosphere
 
         self.xmin, self.xmax, self.ymin, self.ymax, self.zmin, self.zmax = (
             self.x[0],
@@ -79,6 +111,22 @@ class Field3d:
 
         self.sinks = self.bz.copy()
         self.sources = self.bz.copy()
+
+        self.btemp = np.zeros_like(self.z)
+        self.bpres = np.zeros_like(self.z)
+        self.bden = np.zeros_like(self.z)
+        self.dpres = np.zeros_like(
+            self.field[self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 0]
+        )
+        self.dden = np.zeros_like(
+            self.field[self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 0]
+        )
+        self.fpres = np.zeros_like(
+            self.field[self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 0]
+        )
+        self.fden = np.zeros_like(
+            self.field[self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 0]
+        )
 
         self.detect_footpoints()
 
@@ -486,3 +534,18 @@ class Field3d:
         self.btemp = btemp(self)
         self.bpres = bpressure(self)
         self.bden = bdensity(self)
+
+    def vatm(self):
+
+        self.dpres = dpressure(self)
+        self.dden = ddensity(self)
+
+    def fatm(self):
+
+        self.btemp = btemp(self)
+        self.bpres = bpressure(self)
+        self.bden = bdensity(self)
+        self.dpres = dpressure(self)
+        self.dden = ddensity(self)
+        self.fpres = fpressure(self)
+        self.fden = fdensity(self)

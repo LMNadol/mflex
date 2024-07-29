@@ -11,11 +11,6 @@ rho0 = 2.7 * 10**-4  # plasma density at z = 0 in kg/(m^3)
 p0 = t_photosphere * kB * rho0 / mbar  # plasma pressure in kg/(s^2 m)
 mu0 = 1.25663706 * 10**-6  # permeability of free space in mkg/(s^2A^2)
 
-# b0 = 500.0  # Gauss background magnetic field strength in 10^-4 kg/(s^2A) = 10^-4 T
-# pB0 = (b0 * 10**-4) ** 2 / (2 * mu0)  # magnetic pressure b0**2 / 2mu0 in kg/(s^2m)
-# beta0 = p0 / pB0  # Plasma Beta, ration plasma to magnetic pressure
-# h_photo = h / t0 * t_photosphere
-
 
 def btemp(field):
 
@@ -67,3 +62,61 @@ def bdensity(field):
     dummytemp = btemp(field)
 
     return dummypres / dummytemp * temp0
+
+
+def dpressure(field):
+
+    bz_matrix = field.field[field.ny : 2 * field.ny, field.nx : 2 * field.nx, :, 2]
+    z_matrix = np.zeros_like(bz_matrix)
+    z_matrix[:, :, :] = field.z
+
+    return -f(z_matrix, field.z0, field.deltaz, field.a, field.b) * bz_matrix**2.0 / 2.0
+
+
+def ddensity(field):
+
+    bz_matrix = field.field[field.ny : 2 * field.ny, field.nx : 2 * field.nx, :, 2]
+    z_matrix = np.zeros_like(bz_matrix)
+    z_matrix[:, :, :] = field.z
+
+    bdotbz_matrix = np.zeros_like(bz_matrix)
+
+    bdotbz_matrix = (
+        field.field[field.ny : 2 * field.ny, field.nx : 2 * field.nx, :, 0]
+        * field.dfield[field.ny : 2 * field.ny, field.nx : 2 * field.nx, :, 0]
+        + field.field[field.ny : 2 * field.ny, field.nx : 2 * field.nx, :, 1]
+        * field.dfield[field.ny : 2 * field.ny, field.nx : 2 * field.nx, :, 1]
+        + field.field[field.ny : 2 * field.ny, field.nx : 2 * field.nx, :, 2]
+        * field.dfield[field.ny : 2 * field.ny, field.nx : 2 * field.nx, :, 2]
+    )
+
+    return (
+        dfdz(z_matrix, field.z0, field.deltaz, field.a, field.b) * bz_matrix**2 / 2.0
+        + f(z_matrix, field.z0, field.deltaz, field.a, field.b) * bdotbz_matrix
+    )
+
+
+def fpressure(field):
+
+    bp_matrix = np.zeros_like(field.dpres)
+    bp_matrix[:, :, :] = field.bpres
+
+    return field.b0**2.0 / mu0 * 10**-8 * (field.beta0 / 2.0 * bp_matrix + field.dpres)
+
+
+def fdensity(field):
+
+    t0 = (t_photosphere + t_corona * np.tanh(field.z0 / field.deltaz)) / (
+        1.0 + np.tanh(field.z0 / field.deltaz)
+    )
+    h = kB * t0 / (mbar * g_solar) * 10**-6
+
+    bd_matrix = np.zeros_like(field.dden)
+    bd_matrix[:, :, :] = field.bden
+
+    return (
+        field.b0**2.0
+        / (mu0 * g_solar)
+        * 10**-14
+        * (field.beta0 / (2.0 * h) * t0 / t_photosphere * bd_matrix + field.dden)
+    )
