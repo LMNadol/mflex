@@ -61,7 +61,7 @@ class Field3d:
 
         self.path2file = path2file
 
-        self.read()
+        self.other_read(path2file)
 
         self.nf = min(self.nx, self.ny)
 
@@ -135,18 +135,47 @@ class Field3d:
     def read(self):
 
         with open(self.path2file, "rb") as file:
+
             shape = np.fromfile(file, count=3, dtype=np.int32)
+
             self.nx, self.ny, self.nz = (int(n) for n in shape)
+
             print(self.nx, self.ny, self.nz)
+
             pixel = np.fromfile(file, count=3, dtype=np.float64)
+
             self.px, self.py, self.pz = (float(p) for p in pixel)
+
             print(self.px, self.py, self.pz)
+
+            print(self.ny * self.nx)
+
             self.bz = np.fromfile(
-                file, count=self.ny * self.nx, dtype=np.float64
+                file,
+                count=self.ny * self.nx,
+                dtype=np.float64,
             ).reshape((self.ny, self.nx))
+
             self.x = np.fromfile(file, count=self.nx, dtype=np.float64)
             self.y = np.fromfile(file, count=self.ny, dtype=np.float64)
             self.z = np.fromfile(file, count=self.nz, dtype=np.float64)
+
+    def other_read(self, name):
+
+        param = np.load("./data/" + name + "-param.npy")
+        self.nx, self.ny, self.nz, self.px, self.py, self.pz = (
+            np.int32(param[0]),
+            np.int32(param[1]),
+            np.int32(param[2]),
+            np.float64(param[3]),
+            np.float64(param[4]),
+            np.float64(param[5]),
+        )
+
+        self.bz = np.load("./data/" + name + "-image.npy")
+        self.x = np.load("./data/" + name + "-x.npy")
+        self.y = np.load("./data/" + name + "-y.npy")
+        self.z = np.load("./data/" + name + "-z.npy")
 
     def plot(self, footpoints, view):
 

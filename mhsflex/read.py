@@ -88,17 +88,24 @@ def read_fits(name):
     y = np.arange(ny) * (ymax - ymin) / (ny - 1) - ymin
     z = np.arange(nz) * (zmax - zmin) / (nz - 1) - zmin
 
-    print(xmin, xmax, ymin, ymax, zmin, zmax)
-    print(px, py, pz)
-    print(nx, ny, nz)
-    print(image.shape)
-    print(x.shape, y.shape, z.shape)
+    # print(xmin, xmax, ymin, ymax, zmin, zmax)
+    # print(px, py, pz)
+    # print(nx, ny, nz)
+    # print(image.shape)
+    # print(x.shape, y.shape, z.shape)
 
-    with open("./data/" + name + ".npy", "wb") as file:
+    np.save("./data/" + name + "-param.npy", np.array((nx, ny, nz, px, py, pz)))
+    np.save("./data/" + name + "-image.npy", image)
+    np.save("./data/" + name + "-x.npy", x)
+    np.save("./data/" + name + "-y.npy", y)
+    np.save("./data/" + name + "-z.npy", z)
 
-        np.array([nx, ny, nz], dtype=np.int32).tofile(file)
-        np.array([px, py, pz], dtype=np.float64).tofile(file)
-        image.tofile(file)
-        x.tofile(file)
-        y.tofile(file)
-        z.tofile(file)
+    # with open("./data/" + name + ".npy", "wb") as file:
+
+    #     np.array([nx, ny, nz], dtype=np.int32).tofile(file)
+    #     np.array([px, py, pz], dtype=np.float64).tofile(file)
+    #     print(image.shape)
+    #     image.tofile(file)
+    #     x.tofile(file)
+    #     y.tofile(file)
+    #     z.tofile(file)
