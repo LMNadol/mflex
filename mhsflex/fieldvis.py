@@ -137,10 +137,12 @@ class Field3d:
         with open(self.path2file, "rb") as file:
             shape = np.fromfile(file, count=3, dtype=np.int32)
             self.nx, self.ny, self.nz = (int(n) for n in shape)
+            print(self.nx, self.ny, self.nz)
             pixel = np.fromfile(file, count=3, dtype=np.float64)
             self.px, self.py, self.pz = (float(p) for p in pixel)
+            print(self.px, self.py, self.pz)
             self.bz = np.fromfile(
-                file, count=self.nx * self.ny, dtype=np.float64
+                file, count=self.ny * self.nx, dtype=np.float64
             ).reshape((self.ny, self.nx))
             self.x = np.fromfile(file, count=self.nx, dtype=np.float64)
             self.y = np.fromfile(file, count=self.ny, dtype=np.float64)
