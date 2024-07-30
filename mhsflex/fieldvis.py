@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import math
 
@@ -62,6 +64,18 @@ class Field3d:
         self.path2file = path2file
 
         self.other_read(path2file)
+
+        print(self.nx)
+        print(self.ny)
+        print(self.nz)
+        print(self.px)
+        print(self.py)
+        print(self.pz)
+
+        print(self.bz.shape)
+        print(self.x.shape)
+        print(self.y.shape)
+        print(self.z.shape)
 
         self.nf = min(self.nx, self.ny)
 
@@ -131,6 +145,79 @@ class Field3d:
         self.detect_footpoints()
 
         b3d(self)
+
+    @classmethod
+    def from_fits(cls, name) -> Field3d:
+
+        with astroopen("./obs/" + name + ".fits") as data:
+
+            image = getdata("./obs/" + name + ".fits", ext=False)
+
+            hdr = data[0].header
+
+            dist = hdr["DSUN_OBS"]
+
+            px_unit = hdr["CUNIT1"]
+            py_unit = hdr["CUNIT2"]
+            px_arcsec = hdr["CDELT1"]
+            py_arcsec = hdr["CDELT2"]
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.imshow(image, cmap=cmap, norm=norm)
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+        plt.tick_params(direction="in", length=2, width=0.5)
+        ax.invert_yaxis()
+        plt.show()
+
+        stx = int(input("First pixel x axis: "))
+        lstx = int(input("Last pixel x axis: "))
+        sty = int(input("First pixel y axis: "))
+        lsty = int(input("Last pixel y axis: "))
+
+        image = image[sty:lsty, stx:lstx]
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.imshow(image, cmap=cmap, norm=norm)
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+        plt.tick_params(direction="in", length=2, width=0.5)
+        ax.invert_yaxis()
+        plt.show()
+
+        nx = image.shape[1]
+        ny = image.shape[0]
+
+        px_radians = px_arcsec / 206265.0
+        py_radians = py_arcsec / 206265.0
+
+        dist_Mm = dist * 10**-6
+        px = px_radians * dist_Mm
+        py = py_radians * dist_Mm
+
+        xmin = 0.0
+        ymin = 0.0
+        zmin = 0.0
+
+        xmax = nx * px
+        ymax = ny * py
+        zmax = 20.0
+
+        pz = 90.0 * 10**-3
+
+        nz = int(np.floor(zmax / pz))
+
+        x = np.arange(nx) * (xmax - xmin) / (nx - 1) - xmin
+        y = np.arange(ny) * (ymax - ymin) / (ny - 1) - ymin
+        z = np.arange(nz) * (zmax - zmin) / (nz - 1) - zmin
+
+        np.save("./data/" + name + "-param.npy", np.array((nx, ny, nz, px, py, pz)))
+        np.save("./data/" + name + "-image.npy", image)
+        np.save("./data/" + name + "-x.npy", x)
+        np.save("./data/" + name + "-y.npy", y)
+        np.save("./data/" + name + "-z.npy", z)
 
     def read(self):
 

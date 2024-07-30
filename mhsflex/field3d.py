@@ -11,13 +11,13 @@ def mirror(
     Four times the size of original photospheric Bz vector.
     """
 
-    nx = field.shape[0]
-    ny = field.shape[1]
+    nx = field.shape[1]
+    ny = field.shape[0]
 
     field_big = np.zeros((2 * ny, 2 * nx))
 
-    for ix in range(0, nx):
-        for iy in range(0, ny):
+    for ix in range(nx):
+        for iy in range(ny):
             field_big[ny + iy, nx + ix] = field[iy, ix]
             field_big[ny + iy, ix] = -field[iy, nx - 1 - ix]
             field_big[iy, nx + ix] = -field[ny - 1 - iy, ix]
