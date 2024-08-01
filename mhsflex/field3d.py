@@ -1,212 +1,206 @@
+from __future__ import annotations
+from dataclasses import dataclass
 import numpy as np
-from mhsflex.poloidal import phi, dphidz, phi_hypgeo, phi_low, dphidz_hypgeo, dphidz_low
+
+from functools import cached_property
+
+from mhsflex.b3d import b3d
+from mhsflex.field2d import Field2dData
+
+from mhsflex.ff import f, dfdz, f_low, dfdz_low
+
+t_photosphere = 5600.0  # Photospheric temperature
+t_corona = 2.0 * 10.0**6  # Coronal temperature
+
+g_solar = 272.2  # kg/m^3
+kB = 1.380649 * 10**-23  # Boltzmann constant in Joule/ Kelvin = kg m^2/(Ks^2)
+mbar = 1.67262 * 10**-27  # mean molecular weight (proton mass)
+rho0 = 2.7 * 10**-4  # plasma density at z = 0 in kg/(m^3)
+p0 = t_photosphere * kB * rho0 / mbar  # plasma pressure in kg/(s^2 m)
+mu0 = 1.25663706 * 10**-6  # permeability of free space in mkg/(s^2A^2)
 
 
-def mirror(
-    field: np.ndarray[np.float64, np.dtype[np.float64]],
-) -> np.ndarray[np.float64, np.dtype[np.float64]]:
-    """
-    Given the photospheric magnetic field data_bz,
-    returns Seehafer-mirrored Bz field vector.
-    Four times the size of original photospheric Bz vector.
-    """
+@dataclass
+class Field3dData:
+    nx: np.int32
+    ny: np.int32
+    nz: np.int32
+    nf: np.int32
+    x: np.ndarray
+    y: np.ndarray
+    z: np.ndarray
+    bz: np.ndarray
+    field: np.ndarray
+    dfield: np.ndarray
 
-    nx = field.shape[1]
-    ny = field.shape[0]
+    a: float
+    b: float
+    alpha: float
+    z0: np.float64
+    deltaz: np.float64
 
-    field_big = np.zeros((2 * ny, 2 * nx))
-
-    for ix in range(nx):
-        for iy in range(ny):
-            field_big[ny + iy, nx + ix] = field[iy, ix]
-            field_big[ny + iy, ix] = -field[iy, nx - 1 - ix]
-            field_big[iy, nx + ix] = -field[ny - 1 - iy, ix]
-            field_big[iy, ix] = field[ny - 1 - iy, nx - 1 - ix]
-
-    return field_big
-
-
-def fftcoeff(
-    data_bz: np.ndarray[np.float64, np.dtype[np.float64]],
-    nf_max: int,
-) -> np.ndarray[np.float64, np.dtype[np.float64]]:
-    """
-    Given the Seehafer-mirrored photospheric magnetic field data_bz,
-    returns coefficients anm for series expansion of 3D magnetic field.
-    """
-
-    anm = np.zeros((nf_max, nf_max))
-
-    nresol_y = int(data_bz.shape[0])
-    nresol_x = int(data_bz.shape[1])
-
-    signal = np.fft.fftshift(np.fft.fft2(data_bz) / nresol_x / nresol_y)
-
-    for ix in range(0, nresol_x, 2):
-        for iy in range(1, nresol_y, 2):
-            temp = signal[iy, ix]
-            signal[iy, ix] = -temp
-
-    for ix in range(1, nresol_x, 2):
-        for iy in range(0, nresol_y, 2):
-            temp = signal[iy, ix]
-            signal[iy, ix] = -temp
-
-    if nresol_x % 2 == 0:
-        centre_x = int(nresol_x / 2)
-    else:
-        centre_x = int((nresol_x + 1) / 2)
-    if nresol_y % 2 == 0:
-        centre_y = int(nresol_y / 2)
-    else:
-        centre_y = int((nresol_y + 1) / 2)
-
-    for ix in range(nf_max):
-        for iy in range(nf_max):
-            anm[iy, ix] = (
-                -signal[centre_y + iy, centre_x + ix]
-                + signal[centre_y + iy, centre_x - ix]
-                + signal[centre_y - iy, centre_x + ix]
-                - signal[centre_y - iy, centre_x - ix]
-            ).real
-
-    return anm
-
-
-def get_phi_dphi(
-    z_arr: np.ndarray[np.float64, np.dtype[np.float64]],
-    q_arr: np.ndarray[np.float64, np.dtype[np.float64]],
-    p_arr: np.ndarray[np.float64, np.dtype[np.float64]],
-    nf_max: int,
-    nresol_z: int,
-    z0: np.float64 | None = None,
-    deltaz: np.float64 | None = None,
-    kappa: np.float64 | None = None,
-    solution: str = "Asym",
-):
-    phi_arr = np.zeros((nf_max, nf_max, nresol_z))
-    dphidz_arr = np.zeros((nf_max, nf_max, nresol_z))
-
-    if solution == "Asym":
-        assert z0 is not None and deltaz is not None
-
-        for iz, z in enumerate(z_arr):
-            phi_arr[:, :, iz] = phi(z, p_arr, q_arr, z0, deltaz)
-            dphidz_arr[:, :, iz] = dphidz(z, p_arr, q_arr, z0, deltaz)
-
-    elif solution == "Hypergeo":
-
-        assert z0 is not None and deltaz is not None
-
-        for iz, z in enumerate(z_arr):
-            phi_arr[:, :, iz] = phi_hypgeo(z, p_arr, q_arr, z0, deltaz)
-            dphidz_arr[:, :, iz] = dphidz_hypgeo(z, p_arr, q_arr, z0, deltaz)
-
-    elif solution == "Exp":
-
-        assert kappa is not None
-        for iy in range(0, int(nf_max)):
-            for ix in range(0, int(nf_max)):
-                q = q_arr[iy, ix]
-                p = p_arr[iy, ix]
-                for iz in range(0, int(nresol_z)):
-                    z = z_arr[iz]
-                    phi_arr[iy, ix, iz] = phi_low(z, p, q, kappa)
-                    dphidz_arr[iy, ix, iz] = dphidz_low(z, p, q, kappa)
-
-    return phi_arr, dphidz_arr
-
-
-def b3d(field):
-    # Calculate 3d magnetic field data using N+N(2024)
-
-    l = 2.0
-    lx = field.nx * field.px * l
-    ly = field.ny * field.py * l
-    lxn = lx / l
-    lyn = ly / l
-
-    # print(self.px, self.py, self.nx, self.ny)
-
-    # print("length scale", l)
-    # print("length scale x", lx)
-    # print("length scale y", lx)
-    # print("length scale x norm", lxn)
-    # print("length scale y norm", lxn)
-
-    kx = np.arange(field.nf) * np.pi / lxn
-    ky = np.arange(field.nf) * np.pi / lyn
-    ones = 0.0 * np.arange(field.nf) + 1.0
-
-    ky_grid = np.outer(ky, ones)
-    kx_grid = np.outer(ones, kx)
-
-    k2 = np.outer(ky**2, ones) + np.outer(ones, kx**2)
-    k2[0, 0] = (np.pi / lxn) ** 2 + (np.pi / lyn) ** 2
-
-    p = (
-        0.5
-        * field.deltaz
-        * np.sqrt(k2 * (1.0 - field.a - field.a * field.b) - field.alpha**2)
-    )
-    q = (
-        0.5
-        * field.deltaz
-        * np.sqrt(k2 * (1.0 - field.a + field.a * field.b) - field.alpha**2)
+    xmin, xmax, ymin, ymax, zmin, zmax = (
+        x[0],
+        x[-1],
+        y[0],
+        y[-1],
+        z[0],
+        z[-1],
     )
 
-    seehafer = mirror(field.bz)
+    @cached_property
+    def btemp(self) -> np.ndarray:
 
-    anm = np.divide(fftcoeff(seehafer, field.nf), k2)
+        t0 = (t_photosphere + t_corona * np.tanh(self.z0 / self.deltaz)) / (
+            1.0 + np.tanh(self.z0 / self.deltaz)
+        )
+        t1 = (t_corona - t_photosphere) / (1.0 + np.tanh(self.z0 / self.deltaz))
 
-    phi, dphi = get_phi_dphi(field.z, q, p, field.nf, field.nz, field.z0, field.deltaz)
+        return t0 + t1 * np.tanh((self.z - self.z0) / self.deltaz)
 
-    b = np.zeros((2 * field.ny, 2 * field.nx, field.nz, 3))
-    dbz = np.zeros((2 * field.ny, 2 * field.nx, field.nz, 3))
+    @cached_property
+    def bpressure(self) -> np.ndarray:
 
-    sin_x = np.sin(np.outer(kx, field.x_big))
-    sin_y = np.sin(np.outer(ky, field.y_big))
-    cos_x = np.cos(np.outer(kx, field.x_big))
-    cos_y = np.cos(np.outer(ky, field.y_big))
+        t0 = (t_photosphere + t_corona * np.tanh(self.z0 / self.deltaz)) / (
+            1.0 + np.tanh(self.z0 / self.deltaz)
+        )
+        t1 = (t_corona - t_photosphere) / (1.0 + np.tanh(self.z0 / self.deltaz))
+        h = kB * t0 / (mbar * g_solar) * 10**-6
 
-    # print("k2", k2.shape)
-    # print("phi", phi.shape)
-    # print("anm", anm.shape)
-    # print("siny", sin_y.shape)
-    # print("sinx", sin_x.shape)
-    # print("x big", self.x_big.shape)
-    # print("y big", self.y_big.shape)
-    # print("x", self.x.shape)
+        q1 = self.deltaz / (2.0 * h * (1.0 + t1 / t0))
+        q2 = self.deltaz / (2.0 * h * (1.0 - t1 / t0))
+        q3 = self.deltaz * (t1 / t0) / (h * (1.0 - (t1 / t0) ** 2))
 
-    # print("b", b.shape)
-
-    for iz in range(0, field.nz):
-        coeffs = np.multiply(np.multiply(k2, phi[:, :, iz]), anm)
-        b[:, :, iz, 2] = np.matmul(sin_y.T, np.matmul(coeffs, sin_x))
-
-        coeffs1 = np.multiply(np.multiply(anm, dphi[:, :, iz]), ky_grid)
-        coeffs2 = field.alpha * np.multiply(np.multiply(anm, phi[:, :, iz]), kx_grid)
-        b[:, :, iz, 0] = np.matmul(cos_y.T, np.matmul(coeffs1, sin_x)) - np.matmul(
-            sin_y.T, np.matmul(coeffs2, cos_x)
+        p1 = (
+            2.0
+            * np.exp(-2.0 * (self.z - self.z0) / self.deltaz)
+            / (1.0 + np.exp(-2.0 * (self.z - self.z0) / self.deltaz))
+            / (1.0 + np.tanh(self.z0 / self.deltaz))
+        )
+        p2 = (1.0 - np.tanh(self.z0 / self.deltaz)) / (
+            1.0 + np.tanh((self.z - self.z0) / self.deltaz)
+        )
+        p3 = (1.0 + t1 / t0 * np.tanh((self.z - self.z0) / self.deltaz)) / (
+            1.0 - t1 / t0 * np.tanh(self.z0 / self.deltaz)
         )
 
-        coeffs3 = np.multiply(np.multiply(anm, dphi[:, :, iz]), kx_grid)
-        coeffs4 = field.alpha * np.multiply(np.multiply(anm, phi[:, :, iz]), ky_grid)
-        b[:, :, iz, 1] = np.matmul(sin_y.T, np.matmul(coeffs3, cos_x)) + np.matmul(
-            cos_y.T, np.matmul(coeffs4, sin_x)
+        return (p1**q1) * (p2**q2) * (p3**q3)
+
+    @cached_property
+    def bdensity(self) -> np.ndarray:
+
+        t0 = (t_photosphere + t_corona * np.tanh(self.z0 / self.deltaz)) / (
+            1.0 + np.tanh(self.z0 / self.deltaz)
+        )
+        t1 = (t_corona - t_photosphere) / (1.0 + np.tanh(self.z0 / self.deltaz))
+
+        temp0 = t0 - t1 * np.tanh(self.z0 / self.deltaz)
+        dummypres = self.bpressure
+        dummytemp = self.btemp
+
+        return dummypres / dummytemp * temp0
+
+    @cached_property
+    def dpressure(self) -> np.ndarray:
+
+        bz_matrix = self.field[self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 2]
+        z_matrix = np.zeros_like(bz_matrix)
+        z_matrix[:, :, :] = self.z
+
+        return -f(z_matrix, self.z0, self.deltaz, self.a, self.b) * bz_matrix**2.0 / 2.0
+
+    @cached_property
+    def ddensity(self) -> np.ndarray:
+
+        bz_matrix = self.field[self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 2]
+        z_matrix = np.zeros_like(bz_matrix)
+        z_matrix[:, :, :] = self.z
+
+        bdotbz_matrix = np.zeros_like(bz_matrix)
+
+        bdotbz_matrix = (
+            self.field[self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 0]
+            * self.dfield[self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 0]
+            + self.field[self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 1]
+            * self.dfield[self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 1]
+            + self.field[self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 2]
+            * self.dfield[self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 2]
         )
 
-        coeffs5 = np.multiply(np.multiply(k2, dphi[:, :, iz]), anm)
-        dbz[:, :, iz, 2] = np.matmul(sin_y.T, np.matmul(coeffs5, sin_x))
-
-        coeffs6 = np.multiply(np.multiply(np.multiply(k2, phi[:, :, iz]), anm), kx_grid)
-        dbz[:, :, iz, 1] = np.matmul(sin_y.T, np.matmul(coeffs6, cos_x))
-
-        coeffs7 = np.multiply(
-            np.multiply(np.multiply(k2, phi[:, :, iz]), anm),
-            ky_grid,
+        return (
+            dfdz(z_matrix, self.z0, self.deltaz, self.a, self.b) * bz_matrix**2 / 2.0
+            + f(z_matrix, self.z0, self.deltaz, self.a, self.b) * bdotbz_matrix
         )
-        dbz[:, :, iz, 0] = np.matmul(cos_y.T, np.matmul(coeffs7, sin_x))
 
-    field.field = b
-    field.dfield = dbz
+    @cached_property
+    def fpressure(self) -> np.ndarray:
+
+        bp_matrix = np.zeros_like(self.dpressure)
+        bp_matrix[:, :, :] = self.bpressure
+
+        b0 = self.field[
+            :, :, 0, 2
+        ].max()  # Gauss background magnetic field strength in 10^-4 kg/(s^2A) = 10^-4 T
+        pB0 = (b0 * 10**-4) ** 2 / (
+            2 * mu0
+        )  # magnetic pressure b0**2 / 2mu0 in kg/(s^2m)
+        beta0 = p0 / pB0  # Plasma Beta, ration plasma to magnetic pressure
+
+        return b0**2.0 / mu0 * 10**-8 * (beta0 / 2.0 * bp_matrix + self.dpressure)
+
+    @cached_property
+    def fdensity(self) -> np.ndarray:
+
+        t0 = (t_photosphere + t_corona * np.tanh(self.z0 / self.deltaz)) / (
+            1.0 + np.tanh(self.z0 / self.deltaz)
+        )
+        h = kB * t0 / (mbar * g_solar) * 10**-6
+        b0 = self.field[
+            :, :, 0, 2
+        ].max()  # Gauss background magnetic field strength in 10^-4 kg/(s^2A) = 10^-4 T
+        pB0 = (b0 * 10**-4) ** 2 / (
+            2 * mu0
+        )  # magnetic pressure b0**2 / 2mu0 in kg/(s^2m)
+        beta0 = p0 / pB0  # Plasma Beta, ration plasma to magnetic pressure
+
+        bd_matrix = np.zeros_like(self.ddensity)
+        bd_matrix[:, :, :] = self.bdensity
+
+        return (
+            b0**2.0
+            / (mu0 * g_solar)
+            * 10**-14
+            * (beta0 / (2.0 * h) * t0 / t_photosphere * bd_matrix + self.ddensity)
+        )
+
+
+def calculate_magfield(
+    field2d: Field2dData,
+    a: float,
+    b: float,
+    alpha: float,
+    z0: np.float64,
+    deltaz: np.float64,
+) -> Field3dData:
+
+    mf3d, dbz3d = b3d(field2d, a, b, alpha, z0, deltaz)
+
+    data = Field3dData(
+        nx=field2d.nx,
+        ny=field2d.ny,
+        nz=field2d.nz,
+        nf=field2d.nf,
+        x=field2d.x,
+        y=field2d.y,
+        z=field2d.z,
+        bz=field2d.bz,
+        field=mf3d,
+        dfield=dbz3d,
+        a=a,
+        b=b,
+        alpha=alpha,
+        z0=z0,
+        deltaz=deltaz,
+    )
+
+    return data
