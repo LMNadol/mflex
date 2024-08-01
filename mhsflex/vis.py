@@ -32,16 +32,24 @@ norm = colors.SymLogNorm(50, vmin=-7.5e2, vmax=7.5e2)
 def plot(
     data: Field3dData, footpoints_grid: bool, view: Literal["los", "side", "angular"]
 ):
+    xmin, xmax, ymin, ymax, zmin, zmax = (
+        data.x[0],
+        data.x[-1],
+        data.y[0],
+        data.y[-1],
+        data.z[0],
+        data.z[-1],
+    )
 
     fig = plt.figure()
     ax = fig.figure.add_subplot(111, projection="3d")
-    plot_magnetogram(data)
+    plot_magnetogram(data, ax)
 
     if footpoints_grid:
-        plot_fieldlines_grid(data)
+        plot_fieldlines_grid(data, ax)
     else:
         sinks, sources = detect_footpoints(data)
-        plot_fieldlines_footpoints(data, sinks, sources)
+        plot_fieldlines_footpoints(data, sinks, sources, ax)
 
     if view == "los":
         ax.view_init(90, -90)  # type: ignore
@@ -49,8 +57,8 @@ def plot(
         ax.set_xlabel("x", labelpad=10)
         ax.set_ylabel("y", labelpad=10)
 
-        ax.set_xticks(np.arange(0, data.zmax + 1.0 * 10**-8, data.zmax / 5))
-        ax.set_yticks(np.arange(0, data.zmax + 1.0 * 10**-8, data.zmax / 5))
+        ax.set_xticks(np.arange(0, xmax + 1.0 * 10**-8, xmax / 5))
+        ax.set_yticks(np.arange(0, ymax + 1.0 * 10**-8, ymax / 5))
 
         ax.set_zticklabels([])  # type: ignore
         ax.set_zlabel("")  # type: ignore
@@ -66,8 +74,8 @@ def plot(
         ax.set_xlabel("x", labelpad=5)
         ax.set_zlabel("z", labelpad=10)  # type: ignore
 
-        ax.set_xticks(np.arange(0, data.zmax + 1.0 * 10**-8, data.zmax / 5))
-        ax.set_zticks(np.arange(0, data.zmax + 1.0 * 10**-8, data.zmax / 5))  # type: ignore
+        ax.set_xticks(np.arange(0, xmax + 1.0 * 10**-8, xmax / 5))
+        ax.set_zticks(np.arange(0, zmax + 1.0 * 10**-8, zmax / 5))  # type: ignore
 
         ax.set_yticklabels([])  # type: ignore
         ax.set_ylabel("")
@@ -81,9 +89,9 @@ def plot(
     if view == "angular":
         ax.view_init(30, 240, 0)  # type: ignore
 
-        ax.set_xticks(np.arange(0, data.zmax + 1.0 * 10**-8, data.zmax / 5))
-        ax.set_yticks(np.arange(0, data.zmax + 1.0 * 10**-8, data.zmax / 5))
-        ax.set_zticks(np.arange(0, data.zmax + 1.0 * 10**-8, data.zmax / 5))  # type: ignore
+        ax.set_xticks(np.arange(0, xmax + 1.0 * 10**-8, xmax / 5))
+        ax.set_yticks(np.arange(0, ymax + 1.0 * 10**-8, ymax / 5))
+        ax.set_zticks(np.arange(0, zmax + 1.0 * 10**-8, zmax / 5))  # type: ignore
 
         [t.set_va("bottom") for t in ax.get_yticklabels()]  # type: ignore
         [t.set_ha("right") for t in ax.get_yticklabels()]  # type: ignore
@@ -113,6 +121,15 @@ def detect_footpoints(data: Field3dData) -> Tuple:
 
 def show_footpoints(data: Field3dData, sinks: np.ndarray, sources: np.ndarray) -> None:
 
+    xmin, xmax, ymin, ymax, zmin, zmax = (
+        data.x[0],
+        data.x[-1],
+        data.y[0],
+        data.y[-1],
+        data.z[0],
+        data.z[-1],
+    )
+
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.contourf(
@@ -125,21 +142,21 @@ def show_footpoints(data: Field3dData, sinks: np.ndarray, sources: np.ndarray) -
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     plt.tick_params(direction="in", length=2, width=0.5)
-    ax.set_box_aspect(data.ymax / data.xmax)
+    ax.set_box_aspect(ymax / xmax)
 
     for ix in range(0, data.nx, int(data.nx / 50)):
         for iy in range(0, data.ny, int(data.nx / 50)):
             if sources[iy, ix] != 0:
                 ax.scatter(
-                    ix / (data.nx / data.xmax),
-                    iy / (data.ny / data.ymax),
+                    ix / (data.nx / xmax),
+                    iy / (data.ny / ymax),
                     color=c2,
                     s=0.3,
                 )
             if sinks[iy, ix] != 0:
                 ax.scatter(
-                    ix / (data.nx / data.xmax),
-                    iy / (data.ny / data.ymax),
+                    ix / (data.nx / xmax),
+                    iy / (data.ny / ymax),
                     color=c2,
                     s=0.3,
                 )
@@ -147,10 +164,19 @@ def show_footpoints(data: Field3dData, sinks: np.ndarray, sources: np.ndarray) -
         plt.show()
 
 
-def plot_magnetogram(data: Field3dData) -> None:
+def plot_magnetogram(data: Field3dData, ax) -> None:
 
-    x_big = np.arange(2.0 * data.nx) * 2.0 * data.xmax / (2.0 * data.nx - 1) - data.xmax
-    y_big = np.arange(2.0 * data.ny) * 2.0 * data.ymax / (2.0 * data.ny - 1) - data.ymax
+    xmin, xmax, ymin, ymax, zmin, zmax = (
+        data.x[0],
+        data.x[-1],
+        data.y[0],
+        data.y[-1],
+        data.z[0],
+        data.z[-1],
+    )
+
+    x_big = np.arange(2.0 * data.nx) * 2.0 * xmax / (2.0 * data.nx - 1) - xmax
+    y_big = np.arange(2.0 * data.ny) * 2.0 * ymax / (2.0 * data.ny - 1) - ymax
 
     x_grid, y_grid = np.meshgrid(x_big, y_big)
     ax.contourf(
@@ -167,10 +193,10 @@ def plot_magnetogram(data: Field3dData) -> None:
     ax.set_ylabel("y")
     ax.set_zlabel("z")  # type: ignore
     ax.grid(False)
-    ax.set_zlim(data.zmin, data.zmax)  # type: ignore
-    ax.set_xlim(data.xmin, data.xmax)
-    ax.set_ylim(data.ymin, data.ymax)
-    ax.set_box_aspect((data.ymax, data.xmax, data.zmax))  # type : ignore
+    ax.set_zlim(zmin, zmax)  # type: ignore
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+    ax.set_box_aspect((ymax, xmax, zmax))  # type : ignore
 
     ax.xaxis._axinfo["tick"]["inward_factor"] = 0.2  # type : ignore
     ax.xaxis._axinfo["tick"]["outward_factor"] = 0  # type : ignore
@@ -196,11 +222,19 @@ def plot_magnetogram(data: Field3dData) -> None:
 
 
 def plot_fieldlines_footpoints(
-    data: Field3dData, sinks: np.ndarray, sources: np.ndarray
+    data: Field3dData, sinks: np.ndarray, sources: np.ndarray, ax
 ):
+    xmin, xmax, ymin, ymax, zmin, zmax = (
+        data.x[0],
+        data.x[-1],
+        data.y[0],
+        data.y[-1],
+        data.z[0],
+        data.z[-1],
+    )
 
-    x_big = np.arange(2.0 * data.nx) * 2.0 * data.xmax / (2.0 * data.nx - 1) - data.xmax
-    y_big = np.arange(2.0 * data.ny) * 2.0 * data.ymax / (2.0 * data.ny - 1) - data.ymax
+    x_big = np.arange(2.0 * data.nx) * 2.0 * xmax / (2.0 * data.nx - 1) - xmax
+    y_big = np.arange(2.0 * data.ny) * 2.0 * ymax / (2.0 * data.ny - 1) - ymax
 
     h1 = 1.0 / 100.0  # Initial step length for fieldline3D
     eps = 1.0e-8
@@ -212,19 +246,19 @@ def plot_fieldlines_footpoints(
     boxedges = np.zeros((2, 3))
 
     # # Y boundaries must come first, X second due to switched order explained above
-    boxedges[0, 0] = data.ymin
-    boxedges[1, 0] = data.ymax
-    boxedges[0, 1] = data.xmin
-    boxedges[1, 1] = data.xmax
-    boxedges[0, 2] = data.zmin
-    boxedges[1, 2] = data.zmax
+    boxedges[0, 0] = ymin
+    boxedges[1, 0] = ymax
+    boxedges[0, 1] = xmin
+    boxedges[1, 1] = xmax
+    boxedges[0, 2] = zmin
+    boxedges[1, 2] = zmax
 
     for ix in range(0, data.nx, int(data.nx / 30)):
         for iy in range(0, data.ny, int(data.ny / 30)):
             if sources[iy, ix] != 0 or sinks[iy, ix] != 0:
 
-                x_start = ix / (data.nx / data.xmax)
-                y_start = iy / (data.ny / data.ymax)
+                x_start = ix / (data.nx / xmax)
+                y_start = iy / (data.ny / ymax)
 
                 if data.bz[int(y_start), int(x_start)] < 0.0:
                     h1 = -h1
@@ -270,18 +304,27 @@ def plot_fieldlines_footpoints(
                     )
 
 
-def plot_fieldlines_grid(data: Field3dData) -> None:
+def plot_fieldlines_grid(data: Field3dData, ax) -> None:
 
-    x_big = np.arange(2.0 * data.nx) * 2.0 * data.xmax / (2.0 * data.nx - 1) - data.xmax
-    y_big = np.arange(2.0 * data.ny) * 2.0 * data.ymax / (2.0 * data.ny - 1) - data.ymax
+    xmin, xmax, ymin, ymax, zmin, zmax = (
+        data.x[0],
+        data.x[-1],
+        data.y[0],
+        data.y[-1],
+        data.z[0],
+        data.z[-1],
+    )
+
+    x_big = np.arange(2.0 * data.nx) * 2.0 * xmax / (2.0 * data.nx - 1) - xmax
+    y_big = np.arange(2.0 * data.ny) * 2.0 * ymax / (2.0 * data.ny - 1) - ymax
 
     x_0 = 0.0
     y_0 = 0.0
-    dx = data.xmax / 18.0
-    dy = data.ymax / 18.0
+    dx = xmax / 18.0
+    dy = ymax / 18.0
 
-    nlinesmaxx = math.floor(data.xmax / dx)
-    nlinesmaxy = math.floor(data.ymax / dy)
+    nlinesmaxx = math.floor(xmax / dx)
+    nlinesmaxy = math.floor(ymax / dy)
 
     h1 = 1.0 / 100.0  # Initial step length for fieldline3D
     eps = 1.0e-8
@@ -293,12 +336,12 @@ def plot_fieldlines_grid(data: Field3dData) -> None:
     boxedges = np.zeros((2, 3))
 
     # # Y boundaries must come first, X second due to switched order explained above
-    boxedges[0, 0] = data.ymin
-    boxedges[1, 0] = data.ymax
-    boxedges[0, 1] = data.xmin
-    boxedges[1, 1] = data.xmax
-    boxedges[0, 2] = data.zmin
-    boxedges[1, 2] = data.zmax
+    boxedges[0, 0] = ymin
+    boxedges[1, 0] = ymax
+    boxedges[0, 1] = xmin
+    boxedges[1, 1] = xmax
+    boxedges[0, 2] = zmin
+    boxedges[1, 2] = zmax
 
     for ilinesx in range(0, nlinesmaxx):
         for ilinesy in range(0, nlinesmaxy):

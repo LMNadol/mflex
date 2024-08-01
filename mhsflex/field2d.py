@@ -19,21 +19,13 @@ class Field2dData:
     z: np.ndarray
     bz: np.ndarray
 
-    xmin, xmax, ymin, ymax, zmin, zmax = (
-        x[0],
-        x[-1],
-        y[0],
-        y[-1],
-        z[0],
-        z[-1],
-    )
-
     @classmethod
     def from_fits(cls, path):
 
         with astroopen(path) as data:
 
             image = getdata(path, ext=False)
+
             hdr = data[0].header
             dist = hdr["DSUN_OBS"]
             px_unit = hdr["CUNIT1"]

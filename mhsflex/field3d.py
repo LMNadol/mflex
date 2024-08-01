@@ -39,15 +39,6 @@ class Field3dData:
     z0: np.float64
     deltaz: np.float64
 
-    xmin, xmax, ymin, ymax, zmin, zmax = (
-        x[0],
-        x[-1],
-        y[0],
-        y[-1],
-        z[0],
-        z[-1],
-    )
-
     @cached_property
     def btemp(self) -> np.ndarray:
 

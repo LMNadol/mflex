@@ -84,7 +84,7 @@ def get_phi_dphi(
     nresol_z: np.int32,
     z0: np.float64 | None = None,
     deltaz: np.float64 | None = None,
-    kappa: np.float64 | None = None,
+    kappa: float | None = None,
     solution: str = "Asym",
 ):
     phi_arr = np.zeros((nf_max, nf_max, nresol_z))
@@ -128,7 +128,16 @@ def b3d(
     z0: np.float64,
     deltaz: np.float64,
 ) -> Tuple:
-    # Calculate 3d magnetic field data using N+N(2024)
+    # Calculate 3d magnetic field data using N+N(2024)]
+
+    xmin, xmax, ymin, ymax, zmin, zmax = (
+        field.x[0],
+        field.x[-1],
+        field.y[0],
+        field.y[-1],
+        field.z[0],
+        field.z[-1],
+    )
 
     l = 2.0
     lx = field.nx * field.px * l
@@ -166,12 +175,8 @@ def b3d(
     bfield = np.zeros((2 * field.ny, 2 * field.nx, field.nz, 3))
     dbz = np.zeros((2 * field.ny, 2 * field.nx, field.nz, 3))
 
-    x_big = (
-        np.arange(2.0 * field.nx) * 2.0 * field.xmax / (2.0 * field.nx - 1) - field.xmax
-    )
-    y_big = (
-        np.arange(2.0 * field.ny) * 2.0 * field.ymax / (2.0 * field.ny - 1) - field.ymax
-    )
+    x_big = np.arange(2.0 * field.nx) * 2.0 * xmax / (2.0 * field.nx - 1) - xmax
+    y_big = np.arange(2.0 * field.ny) * 2.0 * ymax / (2.0 * field.ny - 1) - ymax
 
     sin_x = np.sin(np.outer(kx, x_big))
     sin_y = np.sin(np.outer(ky, y_big))
