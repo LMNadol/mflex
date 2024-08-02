@@ -7,7 +7,7 @@ from functools import cached_property
 from mhsflex.b3d import b3d
 from mhsflex.field2d import Field2dData
 
-from mhsflex.ff import f, dfdz, f_low, dfdz_low
+from mhsflex.switch import f, dfdz, f_low, dfdz_low
 
 T_PHOTOSPHERE = 5600.0  # Photospheric temperature
 T_CORONA = 2.0 * 10.0**6  # Coronal temperature
