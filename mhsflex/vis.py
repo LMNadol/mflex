@@ -218,8 +218,6 @@ def plot_magnetogram(data: Field3dData, ax) -> None:
     [t.set_va("center") for t in ax.get_zticklabels()]  # type : ignore
     [t.set_ha("center") for t in ax.get_zticklabels()]  # type : ignore
 
-    self.ax.view_init(90, -90)  # type: ignore
-
 
 def plot_fieldlines_footpoints(
     data: Field3dData, sinks: np.ndarray, sources: np.ndarray, ax

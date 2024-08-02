@@ -9,15 +9,15 @@ from mhsflex.field2d import Field2dData
 
 from mhsflex.ff import f, dfdz, f_low, dfdz_low
 
-t_photosphere = 5600.0  # Photospheric temperature
-t_corona = 2.0 * 10.0**6  # Coronal temperature
+T_PHOTOSPHERE = 5600.0  # Photospheric temperature
+T_CORONA = 2.0 * 10.0**6  # Coronal temperature
 
-g_solar = 272.2  # kg/m^3
-kB = 1.380649 * 10**-23  # Boltzmann constant in Joule/ Kelvin = kg m^2/(Ks^2)
-mbar = 1.67262 * 10**-27  # mean molecular weight (proton mass)
-rho0 = 2.7 * 10**-4  # plasma density at z = 0 in kg/(m^3)
-p0 = t_photosphere * kB * rho0 / mbar  # plasma pressure in kg/(s^2 m)
-mu0 = 1.25663706 * 10**-6  # permeability of free space in mkg/(s^2A^2)
+G_SOLAR = 272.2  # kg/m^3
+KB = 1.380649 * 10**-23  # Boltzmann constant in Joule/ Kelvin = kg m^2/(Ks^2)
+MBAR = 1.67262 * 10**-27  # mean molecular weight (proton mass)
+RHO0 = 2.7 * 10**-4  # plasma density at z = 0 in kg/(m^3)
+P0 = T_PHOTOSPHERE * KB * RHO0 / MBAR  # plasma pressure in kg/(s^2 m)
+MU0 = 1.25663706 * 10**-6  # permeability of free space in mkg/(s^2A^2)
 
 
 @dataclass
@@ -42,25 +42,25 @@ class Field3dData:
     @cached_property
     def btemp(self) -> np.ndarray:
 
-        t0 = (t_photosphere + t_corona * np.tanh(self.z0 / self.deltaz)) / (
+        T0 = (T_PHOTOSPHERE + T_CORONA * np.tanh(self.z0 / self.deltaz)) / (
             1.0 + np.tanh(self.z0 / self.deltaz)
         )
-        t1 = (t_corona - t_photosphere) / (1.0 + np.tanh(self.z0 / self.deltaz))
+        T1 = (T_CORONA - T_PHOTOSPHERE) / (1.0 + np.tanh(self.z0 / self.deltaz))
 
-        return t0 + t1 * np.tanh((self.z - self.z0) / self.deltaz)
+        return T0 + T1 * np.tanh((self.z - self.z0) / self.deltaz)
 
     @cached_property
     def bpressure(self) -> np.ndarray:
 
-        t0 = (t_photosphere + t_corona * np.tanh(self.z0 / self.deltaz)) / (
+        T0 = (T_PHOTOSPHERE + T_CORONA * np.tanh(self.z0 / self.deltaz)) / (
             1.0 + np.tanh(self.z0 / self.deltaz)
         )
-        t1 = (t_corona - t_photosphere) / (1.0 + np.tanh(self.z0 / self.deltaz))
-        h = kB * t0 / (mbar * g_solar) * 10**-6
+        T1 = (T_CORONA - T_PHOTOSPHERE) / (1.0 + np.tanh(self.z0 / self.deltaz))
+        H = KB * T0 / (MBAR * G_SOLAR) * 10**-6
 
-        q1 = self.deltaz / (2.0 * h * (1.0 + t1 / t0))
-        q2 = self.deltaz / (2.0 * h * (1.0 - t1 / t0))
-        q3 = self.deltaz * (t1 / t0) / (h * (1.0 - (t1 / t0) ** 2))
+        q1 = self.deltaz / (2.0 * H * (1.0 + T1 / T0))
+        q2 = self.deltaz / (2.0 * H * (1.0 - T1 / T0))
+        q3 = self.deltaz * (T1 / T0) / (H * (1.0 - (T1 / T0) ** 2))
 
         p1 = (
             2.0
@@ -71,8 +71,8 @@ class Field3dData:
         p2 = (1.0 - np.tanh(self.z0 / self.deltaz)) / (
             1.0 + np.tanh((self.z - self.z0) / self.deltaz)
         )
-        p3 = (1.0 + t1 / t0 * np.tanh((self.z - self.z0) / self.deltaz)) / (
-            1.0 - t1 / t0 * np.tanh(self.z0 / self.deltaz)
+        p3 = (1.0 + T1 / T0 * np.tanh((self.z - self.z0) / self.deltaz)) / (
+            1.0 - T1 / T0 * np.tanh(self.z0 / self.deltaz)
         )
 
         return (p1**q1) * (p2**q2) * (p3**q3)
@@ -80,12 +80,12 @@ class Field3dData:
     @cached_property
     def bdensity(self) -> np.ndarray:
 
-        t0 = (t_photosphere + t_corona * np.tanh(self.z0 / self.deltaz)) / (
+        T0 = (T_PHOTOSPHERE + T_CORONA * np.tanh(self.z0 / self.deltaz)) / (
             1.0 + np.tanh(self.z0 / self.deltaz)
         )
-        t1 = (t_corona - t_photosphere) / (1.0 + np.tanh(self.z0 / self.deltaz))
+        T1 = (T_CORONA - T_PHOTOSPHERE) / (1.0 + np.tanh(self.z0 / self.deltaz))
 
-        temp0 = t0 - t1 * np.tanh(self.z0 / self.deltaz)
+        temp0 = T0 - T1 * np.tanh(self.z0 / self.deltaz)
         dummypres = self.bpressure
         dummytemp = self.btemp
 
@@ -129,39 +129,39 @@ class Field3dData:
         bp_matrix = np.zeros_like(self.dpressure)
         bp_matrix[:, :, :] = self.bpressure
 
-        b0 = self.field[
+        B0 = self.field[
             :, :, 0, 2
         ].max()  # Gauss background magnetic field strength in 10^-4 kg/(s^2A) = 10^-4 T
-        pB0 = (b0 * 10**-4) ** 2 / (
-            2 * mu0
+        PB0 = (B0 * 10**-4) ** 2 / (
+            2 * MU0
         )  # magnetic pressure b0**2 / 2mu0 in kg/(s^2m)
-        beta0 = p0 / pB0  # Plasma Beta, ration plasma to magnetic pressure
+        BETA0 = P0 / PB0  # Plasma Beta, ration plasma to magnetic pressure
 
-        return b0**2.0 / mu0 * 10**-8 * (beta0 / 2.0 * bp_matrix + self.dpressure)
+        return B0**2.0 / MU0 * 10**-8 * (BETA0 / 2.0 * bp_matrix + self.dpressure)
 
     @cached_property
     def fdensity(self) -> np.ndarray:
 
-        t0 = (t_photosphere + t_corona * np.tanh(self.z0 / self.deltaz)) / (
+        T0 = (T_PHOTOSPHERE + T_CORONA * np.tanh(self.z0 / self.deltaz)) / (
             1.0 + np.tanh(self.z0 / self.deltaz)
         )
-        h = kB * t0 / (mbar * g_solar) * 10**-6
-        b0 = self.field[
+        H = KB * T0 / (MBAR * G_SOLAR) * 10**-6
+        B0 = self.field[
             :, :, 0, 2
         ].max()  # Gauss background magnetic field strength in 10^-4 kg/(s^2A) = 10^-4 T
-        pB0 = (b0 * 10**-4) ** 2 / (
-            2 * mu0
+        PB0 = (B0 * 10**-4) ** 2 / (
+            2 * MU0
         )  # magnetic pressure b0**2 / 2mu0 in kg/(s^2m)
-        beta0 = p0 / pB0  # Plasma Beta, ration plasma to magnetic pressure
+        BETA0 = P0 / PB0  # Plasma Beta, ration plasma to magnetic pressure
 
         bd_matrix = np.zeros_like(self.ddensity)
         bd_matrix[:, :, :] = self.bdensity
 
         return (
-            b0**2.0
-            / (mu0 * g_solar)
+            B0**2.0
+            / (MU0 * G_SOLAR)
             * 10**-14
-            * (beta0 / (2.0 * h) * t0 / t_photosphere * bd_matrix + self.ddensity)
+            * (BETA0 / (2.0 * H) * T0 / T_PHOTOSPHERE * bd_matrix + self.ddensity)
         )
 
 
