@@ -84,20 +84,26 @@ def get_phi_dphi(
     nresol_z: np.int32,
     z0: np.float64 | None = None,
     deltaz: np.float64 | None = None,
-    kappa: float | None = None,
-    solution: str = "Asym",
+    kappa: np.float64 | None = None,
+    asymptotic=True,
+    tanh=True,
 ):
     phi_arr = np.zeros((nf_max, nf_max, nresol_z))
     dphidz_arr = np.zeros((nf_max, nf_max, nresol_z))
 
-    if solution == "Asym":
+    if asymptotic and tanh:
+
+        # print("Do asymptotic")
+
         assert z0 is not None and deltaz is not None
 
         for iz, z in enumerate(z_arr):
             phi_arr[:, :, iz] = phi(z, p_arr, q_arr, z0, deltaz)
             dphidz_arr[:, :, iz] = dphidz(z, p_arr, q_arr, z0, deltaz)
 
-    elif solution == "Hypergeo":
+    elif not asymptotic and tanh:
+
+        # print("Do N+W")
 
         assert z0 is not None and deltaz is not None
 
@@ -105,9 +111,12 @@ def get_phi_dphi(
             phi_arr[:, :, iz] = phi_hypgeo(z, p_arr, q_arr, z0, deltaz)
             dphidz_arr[:, :, iz] = dphidz_hypgeo(z, p_arr, q_arr, z0, deltaz)
 
-    elif solution == "Exp":
+    elif not asymptotic and not tanh:
+
+        # print("Do Low")
 
         assert kappa is not None
+
         for iy in range(0, int(nf_max)):
             for ix in range(0, int(nf_max)):
                 q = q_arr[iy, ix]
@@ -127,6 +136,8 @@ def b3d(
     alpha: float,
     z0: np.float64,
     deltaz: np.float64,
+    asymptotic=True,
+    tanh=True,
 ) -> Tuple:
     # Calculate 3d magnetic field data using N+N(2024)]
 
@@ -163,14 +174,42 @@ def b3d(
     k2 = np.outer(ky**2, ones) + np.outer(ones, kx**2)
     k2[0, 0] = (np.pi / lxn) ** 2 + (np.pi / lyn) ** 2
 
-    p = 0.5 * deltaz * np.sqrt(k2 * (1.0 - a - a * b) - alpha**2)
-    q = 0.5 * deltaz * np.sqrt(k2 * (1.0 - a + a * b) - alpha**2)
-
     seehafer = mirror(field.bz)
 
     anm = np.divide(fftcoeff(seehafer, field.nf), k2)
 
-    phi, dphi = get_phi_dphi(field.z, q, p, field.nf, field.nz, z0, deltaz)
+    if tanh:
+
+        # print("Do tanh")
+        p = 0.5 * deltaz * np.sqrt(k2 * (1.0 - a - a * b) - alpha**2)
+        q = 0.5 * deltaz * np.sqrt(k2 * (1.0 - a + a * b) - alpha**2)
+        phi, dphi = get_phi_dphi(
+            field.z,
+            q,
+            p,
+            field.nf,
+            field.nz,
+            z0=z0,
+            deltaz=deltaz,
+            asymptotic=asymptotic,
+            tanh=tanh,
+        )
+    else:
+        # print("Do exp")
+        kappa = 1 / z0
+        a = a * (1 - np.tanh(-z0 / deltaz))
+        p = 2.0 / kappa * np.sqrt(k2 - alpha**2)
+        q = 2.0 / kappa * np.sqrt(k2 * a)
+        phi, dphi = get_phi_dphi(
+            field.z,
+            q,
+            p,
+            field.nf,
+            field.nz,
+            kappa=kappa,
+            asymptotic=asymptotic,
+            tanh=tanh,
+        )
 
     bfield = np.zeros((2 * field.ny, 2 * field.nx, field.nz, 3))
     dbz = np.zeros((2 * field.ny, 2 * field.nx, field.nz, 3))

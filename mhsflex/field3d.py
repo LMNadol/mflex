@@ -172,9 +172,11 @@ def calculate_magfield(
     alpha: float,
     z0: np.float64,
     deltaz: np.float64,
+    asymptotic=True,
+    tanh=True,
 ) -> Field3dData:
 
-    mf3d, dbz3d = b3d(field2d, a, b, alpha, z0, deltaz)
+    mf3d, dbz3d = b3d(field2d, a, b, alpha, z0, deltaz, asymptotic, tanh)
 
     data = Field3dData(
         nx=field2d.nx,

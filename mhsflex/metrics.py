@@ -10,6 +10,81 @@ from msat.pyvis.fieldline3d import fieldline3d
 from mhsflex.field3d import Field3dData
 
 
+def compare_field3d(data_ref: Field3dData, data_rec: Field3dData) -> None:
+
+    b_ref = data_ref.field
+    b_rec = data_rec.field
+
+    VC = VecCorr(b_ref, b_rec)
+    CS = CauSchw(b_ref, b_rec)
+    NE = NormErr(b_ref, b_rec)
+    ME = MeanErr(b_ref, b_rec)
+    MAGE = MagEnergy(b_ref, b_rec)
+
+    print("MAGNETIC FIELD VECTOR METRICS")
+    print(
+        "-----------------------------------------------------------------------------------------------------------"
+    )
+    print(
+        "Vector correlation metric: ",
+        VC,
+        "(Reference value: ",
+        VecCorr(b_ref, b_ref),
+        ")",
+    )
+    print(
+        "Cauchy-Schwarz metric: ", CS, "(Reference value: ", CauSchw(b_ref, b_ref), ")"
+    )
+    print(
+        "Normalised vector error metric: ",
+        NE,
+        "(Reference value: ",
+        NormErr(b_ref, b_ref),
+        ")",
+    )
+    print(
+        "Mean vector error metric: ",
+        ME,
+        "(Reference value: ",
+        MeanErr(b_ref, b_ref),
+        ")",
+    )
+    print(
+        "Magnetic energy metric: ",
+        MAGE,
+        "(Reference value: ",
+        MagEnergy(b_ref, b_ref),
+        ")",
+    )
+    print(
+        "-----------------------------------------------------------------------------------------------------------"
+    )
+    print("FIELD LINE DIVERGENCE METRIC")
+    print(
+        "-----------------------------------------------------------------------------------------------------------"
+    )
+
+    ratioall, ratioclosed = field_div_metric(data_ref, data_rec)
+
+    print(
+        "Percentage of footpoints with error smaller than 10 percent of all fieldlines: ",
+        ratioall,
+    )
+    print(
+        "Percentage of footpoints with error smaller than 10 percent of all closed fieldlines: ",
+        ratioclosed,
+    )
+    print(
+        "-----------------------------------------------------------------------------------------------------------"
+    )
+    print("PLASMA PARAMETER PEARSON CORRELATION COEFFICIENT METRICS")
+    print(
+        "-----------------------------------------------------------------------------------------------------------"
+    )
+
+    pres_ref, den_ref, pres_rec, den_rec = pearson_corr_coeff(data_ref, data_rec)
+
+
 def VecCorr(
     B: np.ndarray,
     b: np.ndarray,
@@ -24,26 +99,30 @@ def VecCorr(
     if B.shape != b.shape:
         raise ValueError("Field sizes do not match.")
 
-    for iy in range(B.shape[0]):
-        for ix in range(B.shape[1]):
-            for iz in range(B.shape[2]):
-                sum1 = sum1 + (
-                    B[0, iy, ix, iz] * b[0, iy, ix, iz]
-                    + B[1, iy, ix, iz] * b[1, iy, ix, iz]
-                    + B[2, iy, ix, iz] * b[2, iy, ix, iz]
-                )
-                sum2 = sum2 + (
-                    B[0, iy, ix, iz] * B[0, iy, ix, iz]
-                    + B[1, iy, ix, iz] * B[1, iy, ix, iz]
-                    + B[2, iy, ix, iz] * B[2, iy, ix, iz]
-                )
-                sum3 = sum3 + (
-                    b[0, iy, ix, iz] * b[0, iy, ix, iz]
-                    + b[1, iy, ix, iz] * b[1, iy, ix, iz]
-                    + b[2, iy, ix, iz] * b[2, iy, ix, iz]
-                )
+    return np.sum(np.multiply(B, b)) / np.sqrt(
+        np.sum(np.multiply(B, B)) * np.sum(np.multiply(b, b))
+    )
 
-    return sum1 / np.sqrt(sum2 * sum3)
+    # for iy in range(B.shape[0]):
+    #     for ix in range(B.shape[1]):
+    #         for iz in range(B.shape[2]):
+    #             sum1 = sum1 + (
+    #                 B[iy, ix, iz, 0] * b[iy, ix, iz, 0]
+    #                 + B[iy, ix, iz, 1] * b[iy, ix, iz, 1]
+    #                 + B[iy, ix, iz, 2] * b[iy, ix, iz, 2]
+    #             )
+    #             sum2 = sum2 + (
+    #                 B[iy, ix, iz, 0] * B[iy, ix, iz, 0]
+    #                 + B[iy, ix, iz, 1] * B[iy, ix, iz, 1]
+    #                 + B[iy, ix, iz, 2] * B[iy, ix, iz, 2]
+    #             )
+    #             sum3 = sum3 + (
+    #                 b[iy, ix, iz, 0] * b[iy, ix, iz, 0]
+    #                 + b[iy, ix, iz, 1] * b[iy, ix, iz, 1]
+    #                 + b[iy, ix, iz, 2] * b[iy, ix, iz, 2]
+    #             )
+
+    # return sum1 / np.sqrt(sum2 * sum3)
 
 
 def CauSchw(
@@ -57,28 +136,46 @@ def CauSchw(
     if B.shape != b.shape:
         raise ValueError("Field sizes do not match.")
 
-    sum1 = 0
-    for iy in range(B.shape[1]):
-        for ix in range(B.shape[2]):
-            for iz in range(B.shape[3]):
-                sum1 = sum1 + (
-                    B[0, iy, ix, iz] * b[0, iy, ix, iz]
-                    + B[1, iy, ix, iz] * b[1, iy, ix, iz]
-                    + B[2, iy, ix, iz] * b[2, iy, ix, iz]
-                ) / (
-                    np.sqrt(
-                        B[0, iy, ix, iz] * B[0, iy, ix, iz]
-                        + B[1, iy, ix, iz] * B[1, iy, ix, iz]
-                        + B[2, iy, ix, iz] * B[2, iy, ix, iz]
-                    )
-                    * np.sqrt(
-                        b[0, iy, ix, iz] * b[0, iy, ix, iz]
-                        + b[1, iy, ix, iz] * b[1, iy, ix, iz]
-                        + b[2, iy, ix, iz] * b[2, iy, ix, iz]
-                    )
-                )
+    return (
+        np.sum(np.multiply(B[:, :, :, 0], b[:, :, :, 0]))
+        / (
+            np.sqrt(np.sum(np.multiply(B[:, :, :, 0], B[:, :, :, 0])))
+            * np.sqrt(np.sum(np.multiply(b[:, :, :, 0], b[:, :, :, 0])))
+        )
+        + np.sum(np.multiply(B[:, :, :, 1], b[:, :, :, 1]))
+        / (
+            np.sqrt(np.sum(np.multiply(B[:, :, :, 1], B[:, :, :, 1])))
+            * np.sqrt(np.sum(np.multiply(b[:, :, :, 1], b[:, :, :, 1])))
+        )
+        + np.sum(np.multiply(B[:, :, :, 2], b[:, :, :, 2]))
+        / (
+            np.sqrt(np.sum(np.multiply(B[:, :, :, 2], B[:, :, :, 2])))
+            * np.sqrt(np.sum(np.multiply(b[:, :, :, 2], b[:, :, :, 2])))
+        )
+    ) / (B.shape[0] * B.shape[1] * B.shape[2])
 
-    return np.float64(sum1 / (B.shape[1] * B.shape[2] * B.shape[3]))
+    # sum1 = 0
+    # for iy in range(B.shape[0]):
+    #     for ix in range(B.shape[1]):
+    #         for iz in range(B.shape[2]):
+    #             sum1 = sum1 + (
+    #                 B[iy, ix, iz, 0] * b[iy, ix, iz, 0]
+    #                 + B[iy, ix, iz, 1] * b[iy, ix, iz, 1]
+    #                 + B[iy, ix, iz, 2] * b[iy, ix, iz, 2]
+    #             ) / (
+    #                 np.sqrt(
+    #                     B[iy, ix, iz, 0] * B[iy, ix, iz, 0]
+    #                     + B[iy, ix, iz, 1] * B[iy, ix, iz, 1]
+    #                     + B[iy, ix, iz, 2] * B[iy, ix, iz, 2]
+    #                 )
+    #                 * np.sqrt(
+    #                     b[iy, ix, iz, 0] * b[iy, ix, iz, 0]
+    #                     + b[iy, ix, iz, 1] * b[iy, ix, iz, 1]
+    #                     + b[iy, ix, iz, 2] * b[iy, ix, iz, 2]
+    #                 )
+    #             )
+
+    # return np.float64(sum1 / (B.shape[1] * B.shape[2] * B.shape[3]))
 
 
 def NormErr(
@@ -92,27 +189,55 @@ def NormErr(
     if B.shape != b.shape:
         raise ValueError("Field sizes do not match.")
 
-    sum1 = 0
-    sum2 = 0
-
-    for iy in range(B.shape[1]):
-        for ix in range(B.shape[2]):
-            for iz in range(B.shape[3]):
-                sum1 = sum1 + np.sqrt(
-                    (B[0, iy, ix, iz] - b[0, iy, ix, iz])
-                    * (B[0, iy, ix, iz] - b[0, iy, ix, iz])
-                    + (B[1, iy, ix, iz] - b[1, iy, ix, iz])
-                    * (B[1, iy, ix, iz] - b[1, iy, ix, iz])
-                    + (B[2, iy, ix, iz] - b[2, iy, ix, iz])
-                    * (B[2, iy, ix, iz] - b[2, iy, ix, iz])
+    return (
+        np.sqrt(
+            np.sum(
+                np.multiply(
+                    B[:, :, :, 0] - b[:, :, :, 0], B[:, :, :, 0] - b[:, :, :, 0]
                 )
-                sum2 = sum2 + np.sqrt(
-                    B[0, iy, ix, iz] * B[0, iy, ix, iz]
-                    + B[1, iy, ix, iz] * B[1, iy, ix, iz]
-                    + B[2, iy, ix, iz] * B[2, iy, ix, iz]
+            )
+        )
+        + np.sqrt(
+            np.sum(
+                np.multiply(
+                    B[:, :, :, 1] - b[:, :, :, 1], B[:, :, :, 1] - b[:, :, :, 1]
                 )
+            )
+        )
+        + np.sqrt(
+            np.sum(
+                np.multiply(
+                    B[:, :, :, 2] - b[:, :, :, 2], B[:, :, :, 2] - b[:, :, :, 2]
+                )
+            )
+        )
+    ) / (
+        np.sqrt(np.sum(np.multiply(B[:, :, :, 0], B[:, :, :, 0])))
+        + np.sqrt(np.sum(np.multiply(B[:, :, :, 1], B[:, :, :, 1])))
+        + np.sqrt(np.sum(np.multiply(B[:, :, :, 2], B[:, :, :, 2])))
+    )
 
-    return np.float64(sum1 / sum2)
+    # sum1 = 0
+    # sum2 = 0
+
+    # for iy in range(B.shape[0]):
+    #     for ix in range(B.shape[1]):
+    #         for iz in range(B.shape[2]):
+    #             sum1 = sum1 + np.sqrt(
+    #                 (B[iy, ix, iz, 0] - b[iy, ix, iz, 0])
+    #                 * (B[iy, ix, iz, 0] - b[iy, ix, iz, 0])
+    #                 + (B[iy, ix, iz, 1] - b[iy, ix, iz, 1])
+    #                 * (B[iy, ix, iz, 1] - b[iy, ix, iz, 1])
+    #                 + (B[iy, ix, iz, 2] - b[iy, ix, iz, 2])
+    #                 * (B[iy, ix, iz, 2] - b[iy, ix, iz, 2])
+    #             )
+    #             sum2 = sum2 + np.sqrt(
+    #                 B[iy, ix, iz, 0] * B[iy, ix, iz, 0]
+    #                 + B[iy, ix, iz, 1] * B[iy, ix, iz, 1]
+    #                 + B[iy, ix, iz, 2] * B[iy, ix, iz, 2]
+    #             )
+
+    # return np.float64(sum1 / sum2)
 
 
 def MeanErr(
@@ -126,26 +251,54 @@ def MeanErr(
     if B.shape != b.shape:
         raise ValueError("Field sizes do not match.")
 
-    N = B.shape[1] * B.shape[2] * B.shape[3]
-    sum1 = 0
+    N = B.shape[0] * B.shape[1] * B.shape[2]
 
-    for iy in range(B.shape[1]):
-        for ix in range(B.shape[2]):
-            for iz in range(B.shape[3]):
-                sum1 = sum1 + np.sqrt(
-                    (B[0, iy, ix, iz] - b[0, iy, ix, iz])
-                    * (B[0, iy, ix, iz] - b[0, iy, ix, iz])
-                    + (B[1, iy, ix, iz] - b[1, iy, ix, iz])
-                    * (B[1, iy, ix, iz] - b[1, iy, ix, iz])
-                    + (B[2, iy, ix, iz] - b[2, iy, ix, iz])
-                    * (B[2, iy, ix, iz] - b[2, iy, ix, iz])
-                ) / np.sqrt(
-                    B[0, iy, ix, iz] * B[0, iy, ix, iz]
-                    + B[1, iy, ix, iz] * B[1, iy, ix, iz]
-                    + B[2, iy, ix, iz] * B[2, iy, ix, iz]
+    return (
+        np.sqrt(
+            np.sum(
+                np.multiply(
+                    B[:, :, :, 0] - b[:, :, :, 0], B[:, :, :, 0] - b[:, :, :, 0]
                 )
+            )
+        )
+        / np.sqrt(np.sum(np.multiply(B[:, :, :, 0], B[:, :, :, 0])))
+        + np.sqrt(
+            np.sum(
+                np.multiply(
+                    B[:, :, :, 1] - b[:, :, :, 1], B[:, :, :, 1] - b[:, :, :, 1]
+                )
+            )
+        )
+        / np.sqrt(np.sum(np.multiply(B[:, :, :, 1], B[:, :, :, 1])))
+        + np.sqrt(
+            np.sum(
+                np.multiply(
+                    B[:, :, :, 2] - b[:, :, :, 2], B[:, :, :, 2] - b[:, :, :, 2]
+                )
+            )
+        )
+        / np.sqrt(np.sum(np.multiply(B[:, :, :, 2], B[:, :, :, 2])))
+    ) / N
 
-    return np.float64(sum1 / N)
+    # sum1 = 0
+
+    # for iy in range(B.shape[0]):
+    #     for ix in range(B.shape[1]):
+    #         for iz in range(B.shape[2]):
+    #             sum1 = sum1 + np.sqrt(
+    #                 (B[iy, ix, iz, 0] - b[iy, ix, iz, 0])
+    #                 * (B[iy, ix, iz, 0] - b[iy, ix, iz, 0])
+    #                 + (B[iy, ix, iz, 1] - b[iy, ix, iz, 1])
+    #                 * (B[iy, ix, iz, 1] - b[iy, ix, iz, 1])
+    #                 + (B[iy, ix, iz, 2] - b[iy, ix, iz, 2])
+    #                 * (B[iy, ix, iz, 2] - b[iy, ix, iz, 2])
+    #             ) / np.sqrt(
+    #                 B[iy, ix, iz, 0] * B[iy, ix, iz, 0]
+    #                 + B[iy, ix, iz, 1] * B[iy, ix, iz, 1]
+    #                 + B[iy, ix, iz, 2] * B[iy, ix, iz, 2]
+    #             )
+
+    # return np.float64(sum1 / N)
 
 
 def MagEnergy(
@@ -156,24 +309,26 @@ def MagEnergy(
     if B.shape != b.shape:
         raise ValueError("Field sizes do not match.")
 
-    sum1 = 0
-    sum2 = 0
+    return np.sum(np.multiply(b, b)) / np.sum(np.multiply(B, B))
 
-    for iy in range(B.shape[1]):
-        for ix in range(B.shape[2]):
-            for iz in range(B.shape[3]):
-                sum1 = sum1 + (
-                    B[0, iy, ix, iz] * B[0, iy, ix, iz]
-                    + B[1, iy, ix, iz] * B[1, iy, ix, iz]
-                    + B[2, iy, ix, iz] * B[2, iy, ix, iz]
-                )
-                sum2 = sum2 + (
-                    b[0, iy, ix, iz] * b[0, iy, ix, iz]
-                    + b[1, iy, ix, iz] * b[1, iy, ix, iz]
-                    + b[2, iy, ix, iz] * b[2, iy, ix, iz]
-                )
+    # sum1 = 0
+    # sum2 = 0
 
-    return np.float64(sum1 / sum2)
+    # for iy in range(B.shape[0]):
+    #     for ix in range(B.shape[1]):
+    #         for iz in range(B.shape[2]):
+    #             sum1 = sum1 + (
+    #                 B[iy, ix, iz, 0] * B[iy, ix, iz, 0]
+    #                 + B[iy, ix, iz, 1] * B[iy, ix, iz, 1]
+    #                 + B[iy, ix, iz, 2] * B[iy, ix, iz, 2]
+    #             )
+    #             sum2 = sum2 + (
+    #                 b[iy, ix, iz, 0] * b[iy, ix, iz, 0]
+    #                 + b[iy, ix, iz, 1] * b[iy, ix, iz, 1]
+    #                 + b[iy, ix, iz, 2] * b[iy, ix, iz, 2]
+    #             )
+
+    # return np.float64(sum1 / sum2)
 
 
 def field_div_metric(
