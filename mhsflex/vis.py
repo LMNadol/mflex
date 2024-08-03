@@ -484,7 +484,7 @@ def plot_plasma_parameters(data: Field3dData, path: str):
 
     fig, ax1 = plt.subplots()
 
-    ax1.plot(
+    p1 = ax1.plot(
         z_arr,
         data.dpressure[iy_max, ix_max, :],
         linewidth=0.5,
@@ -494,7 +494,7 @@ def plot_plasma_parameters(data: Field3dData, path: str):
     )
     ax1.set_ylabel(r"$\Delta p$")
     ax2 = ax1.twinx()
-    ax2.plot(
+    p2 = ax2.plot(
         z_arr,
         data.ddensity[iy_max, ix_max, :],
         linewidth=0.5,
@@ -507,15 +507,16 @@ def plot_plasma_parameters(data: Field3dData, path: str):
     ax1.set_xlabel("z")
     ax1.tick_params(direction="in", length=2, width=0.5)
     ax2.tick_params(direction="in", length=2, width=0.5)
-    # ax1.legend(frameon=False)
-    # ax2.legend(frameon=False)
+    lns = p1 + p2
+    labs = [l.get_label() for l in lns]
+    ax1.legend(lns, labs, loc=0, frameon=False)
     plotname = path + "/pp_variations.png"
     plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
     plt.show()
 
     fig, ax1 = plt.subplots()
 
-    ax1.plot(
+    p1 = ax1.plot(
         z_arr,
         data.bpressure,
         linewidth=0.5,
@@ -525,7 +526,7 @@ def plot_plasma_parameters(data: Field3dData, path: str):
     )
     ax1.set_ylabel(r"$p_b$")
     ax2 = ax1.twinx()
-    ax2.plot(
+    p2 = ax2.plot(
         z_arr,
         data.bdensity,
         linewidth=0.5,
@@ -538,15 +539,16 @@ def plot_plasma_parameters(data: Field3dData, path: str):
     ax1.set_xlabel("z")
     ax1.tick_params(direction="in", length=2, width=0.5)
     ax2.tick_params(direction="in", length=2, width=0.5)
-    # ax1.legend(frameon=False)
-    # ax2.legend(frameon=False)
+    lns = p1 + p2
+    labs = [l.get_label() for l in lns]
+    ax1.legend(lns, labs, loc=0, frameon=False)
     plotname = path + "/pp_background.png"
     plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
     plt.show()
 
     fig, ax1 = plt.subplots()
 
-    ax1.plot(
+    p1 = ax1.plot(
         z_arr,
         data.fpressure[iy_max, ix_max, :],
         linewidth=0.5,
@@ -556,7 +558,7 @@ def plot_plasma_parameters(data: Field3dData, path: str):
     )
     ax1.set_ylabel(r"$p$")
     ax2 = ax1.twinx()
-    ax2.plot(
+    p2 = ax2.plot(
         z_arr,
         data.fdensity[iy_max, ix_max, :],
         linewidth=0.5,
@@ -569,14 +571,15 @@ def plot_plasma_parameters(data: Field3dData, path: str):
     ax1.set_xlabel("z")
     ax1.tick_params(direction="in", length=2, width=0.5)
     ax2.tick_params(direction="in", length=2, width=0.5)
-    # ax1.legend(frameon=False)
-    # ax2.legend(frameon=False)
+    lns = p1 + p2
+    labs = [l.get_label() for l in lns]
+    ax1.legend(lns, labs, loc=0, frameon=False)
     plotname = path + "/pp.png"
     plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
     plt.show()
 
 
-def compare_plasma_parameters(data1: Field3dData, data2: Field3dData, path: str):
+def plot_pp_comp(data1: Field3dData, data2: Field3dData, path: str):
 
     if data1.field.shape != data2.field.shape:
         raise ValueError("Field sizes do not match.")
