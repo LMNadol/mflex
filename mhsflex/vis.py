@@ -5,6 +5,8 @@ from typing import Literal, Tuple
 import numpy as np
 import math
 
+from scipy.ndimage import maximum_filter, minimum_filter, label, find_objects
+
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib import rc, colors
@@ -32,7 +34,11 @@ norm = colors.SymLogNorm(50, vmin=-7.5e2, vmax=7.5e2)
 
 
 def plot(
-    data: Field3dData, footpoints_grid: bool, view: Literal["los", "side", "angular"]
+    data: Field3dData,
+    view: Literal["los", "side", "angular"],
+    footpoints_grid: bool = False,
+    save: bool = False,
+    path: str | None = None,
 ):
     xmin, xmax, ymin, ymax, zmin, zmax = (
         data.x[0],
@@ -104,6 +110,115 @@ def plot(
         [t.set_va("top") for t in ax.get_zticklabels()]  # type: ignore
         [t.set_ha("center") for t in ax.get_zticklabels()]  # type: ignore
 
+    if save:
+
+        assert path is not None
+
+        plotname = (
+            path
+            + "/fieldlines_"
+            + str(data.a)
+            + "_"
+            + str(data.alpha)
+            + "_"
+            + str(data.b)
+            + "_"
+            + view
+            + ".png"
+        )
+        plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
+
+    plt.show()
+
+
+def find_center(data: Field3dData) -> Tuple:
+
+    xmin, xmax, ymin, ymax, zmin, zmax = (
+        data.x[0],
+        data.x[-1],
+        data.y[0],
+        data.y[-1],
+        data.z[0],
+        data.z[-1],
+    )
+
+    neighborhood_size = data.nx / 10
+    threshold = 1.0
+
+    data_max = maximum_filter(data.bz, neighborhood_size)  # mode ='reflect'
+    maxima = data.bz == data_max
+    data_min = minimum_filter(data.bz, neighborhood_size)
+    minima = data.bz == data_min
+
+    diff = (data_max - data_min) > threshold
+    maxima[diff == 0] = 0
+    minima[diff == 0] = 0
+
+    labeled_sources, num_objects_sources = label(maxima)
+    slices_sources = find_objects(labeled_sources)
+    x_sources, y_sources = [], []
+
+    labeled_sinks, num_objects_sinks = label(minima)
+    slices_sinks = find_objects(labeled_sinks)
+    x_sinks, y_sinks = [], []
+
+    for dy, dx in slices_sources:
+        x_center = (dx.start + dx.stop - 1) / 2
+        x_sources.append(x_center / (data.nx / xmax))
+        y_center = (dy.start + dy.stop - 1) / 2
+        y_sources.append(y_center / (data.ny / ymax))
+
+    for dy, dx in slices_sinks:
+        x_center = (dx.start + dx.stop - 1) / 2
+        x_sinks.append(x_center / (data.nx / xmax))
+        y_center = (dy.start + dy.stop - 1) / 2
+        y_sinks.append(y_center / (data.ny / ymax))
+
+    return x_sources, y_sources, x_sinks, y_sinks
+
+
+def show_poles(data: Field3dData):
+
+    x_plot = np.outer(data.y, np.ones(data.nx))
+    y_plot = np.outer(data.x, np.ones(data.ny)).T
+
+    xmin, xmax, ymin, ymax, zmin, zmax = (
+        data.x[0],
+        data.x[-1],
+        data.y[0],
+        data.y[-1],
+        data.z[0],
+        data.z[-1],
+    )
+
+    x_sources, y_sources, x_sinks, y_sinks = find_center(data)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    # ax.grid(color="white", linestyle="dotted", linewidth=0.5)
+    ax.contourf(y_plot, x_plot, data.bz, 1000, cmap=cmap)
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    plt.tick_params(direction="in", length=2, width=0.5)
+    ax.set_box_aspect(ymax / xmax)
+
+    for i in range(0, len(x_sinks)):
+
+        xx = x_sinks[i]
+        yy = y_sinks[i]
+        ax.scatter(xx, yy, marker="x", color=c2)
+
+    for i in range(0, len(x_sources)):
+
+        xx = x_sources[i]
+        yy = y_sources[i]
+        ax.scatter(xx, yy, marker="x", color=c1)
+
+    sinks_label = mpatches.Patch(color=c2, label="Sinks")
+    sources_label = mpatches.Patch(color=c1, label="Sources")
+
+    plt.legend(handles=[sinks_label, sources_label], frameon=False)
+
     plt.show()
 
 
@@ -121,7 +236,9 @@ def detect_footpoints(data: Field3dData) -> Tuple:
     return sinks, sources
 
 
-def show_footpoints(data: Field3dData, sinks: np.ndarray, sources: np.ndarray) -> None:
+def show_footpoints(data: Field3dData) -> None:
+
+    sinks, sources = detect_footpoints(data)
 
     xmin, xmax, ymin, ymax, zmin, zmax = (
         data.x[0],
@@ -146,24 +263,29 @@ def show_footpoints(data: Field3dData, sinks: np.ndarray, sources: np.ndarray) -
     plt.tick_params(direction="in", length=2, width=0.5)
     ax.set_box_aspect(ymax / xmax)
 
-    for ix in range(0, data.nx, int(data.nx / 50)):
-        for iy in range(0, data.ny, int(data.nx / 50)):
+    for ix in range(0, data.nx, int(data.nx / 20)):
+        for iy in range(0, data.ny, int(data.ny / 20)):
             if sources[iy, ix] != 0:
                 ax.scatter(
                     ix / (data.nx / xmax),
                     iy / (data.ny / ymax),
-                    color=c2,
-                    s=0.3,
+                    color=c1,
+                    s=0.5,
                 )
             if sinks[iy, ix] != 0:
                 ax.scatter(
                     ix / (data.nx / xmax),
                     iy / (data.ny / ymax),
                     color=c2,
-                    s=0.3,
+                    s=0.5,
                 )
 
-        plt.show()
+    sinks_label = mpatches.Patch(color=c2, label="Sinks")
+    sources_label = mpatches.Patch(color=c1, label="Sources")
+
+    plt.legend(handles=[sinks_label, sources_label], frameon=False)
+
+    plt.show()
 
 
 def plot_magnetogram(data: Field3dData, ax) -> None:
@@ -253,8 +375,8 @@ def plot_fieldlines_footpoints(
     boxedges[0, 2] = zmin
     boxedges[1, 2] = zmax
 
-    for ix in range(0, data.nx, int(data.nx / 30)):
-        for iy in range(0, data.ny, int(data.ny / 30)):
+    for ix in range(0, data.nx, int(data.nx / 20)):
+        for iy in range(0, data.ny, int(data.ny / 20)):
             if sources[iy, ix] != 0 or sinks[iy, ix] != 0:
 
                 x_start = ix / (data.nx / xmax)
@@ -392,81 +514,7 @@ def plot_fieldlines_grid(data: Field3dData, ax) -> None:
                 )
 
 
-# def find_center(self):
-
-#     neighborhood_size = 70
-#     threshold = 1.0
-
-#     data_max = maximum_filter(self.bz, neighborhood_size)  # mode ='reflect'
-#     maxima = self.bz == data_max
-#     data_min = minimum_filter(self.bz, neighborhood_size)
-#     minima = self.bz == data_min
-
-#     diff = (data_max - data_min) > threshold
-#     maxima[diff == 0] = 0
-#     minima[diff == 0] = 0
-
-#     labeled_sources, num_objects_sources = label(maxima)
-#     slices_sources = find_objects(labeled_sources)
-#     x_sources, y_sources = [], []
-
-#     labeled_sinks, num_objects_sinks = label(minima)
-#     slices_sinks = find_objects(labeled_sinks)
-#     x_sinks, y_sinks = [], []
-
-#     for dy, dx in slices_sources:
-#         x_center = (dx.start + dx.stop - 1) / 2
-#         x_sources.append(x_center / (self.nx / self.xmax))
-#         y_center = (dy.start + dy.stop - 1) / 2
-#         y_sources.append(y_center / (self.ny / self.ymax))
-
-#     for dy, dx in slices_sinks:
-#         x_center = (dx.start + dx.stop - 1) / 2
-#         x_sinks.append(x_center / (self.nx / self.xmax))
-#         y_center = (dy.start + dy.stop - 1) / 2
-#         y_sinks.append(y_center / (self.ny / self.ymax))
-
-#     self.sourcesx = x_sources
-#     self.sourcesy = y_sources
-
-#     self.sinksx = x_sinks
-#     self.sinksy = y_sinks
-
-# def plot_ss(self):
-
-#     x_plot = np.outer(self.y, np.ones(self.nx))
-#     y_plot = np.outer(self.x, np.ones(self.ny)).T
-
-#     fig = plt.figure()
-#     ax = fig.add_subplot(111)
-#     # ax.grid(color="white", linestyle="dotted", linewidth=0.5)
-#     ax.contourf(y_plot, x_plot, self.bz, 1000, cmap=cmap)
-#     ax.set_xlabel("x")
-#     ax.set_ylabel("y")
-#     plt.tick_params(direction="in", length=2, width=0.5)
-#     ax.set_box_aspect(self.ymax / self.xmax)
-
-#     for i in range(0, len(self.sinksx)):
-
-#         xx = self.sinksx[i]
-#         yy = self.sinksy[i]
-#         ax.scatter(xx, yy, marker="x", color=c2)
-
-#     for i in range(0, len(self.sourcesx)):
-
-#         xx = self.sourcesx[i]
-#         yy = self.sourcesy[i]
-#         ax.scatter(xx, yy, marker="x", color=c1)
-
-#     sinks_label = mpatches.Patch(color=c2, label="Sinks")
-#     sources_label = mpatches.Patch(color=c1, label="Sources")
-
-#     plt.legend(handles=[sinks_label, sources_label], frameon=False)
-
-#     plt.show()
-
-
-def plot_plasma_parameters(data: Field3dData, path: str):
+def plot_plasma_parameters(data: Field3dData, path: str | None = None):
 
     ix_max = np.unravel_index(data.bz.argmax(), data.bz.shape)[1]
     iy_max = np.unravel_index(data.bz.argmax(), data.bz.shape)[0]
@@ -503,15 +551,18 @@ def plot_plasma_parameters(data: Field3dData, path: str):
         label=r"$\Delta \rho$",
     )
     ax2.set_ylabel(r"$\Delta \rho$")
-    plt.xlim([0, 2 * data.z0])
+    # plt.xlim([0, 2 * data.z0])
     ax1.set_xlabel("z")
     ax1.tick_params(direction="in", length=2, width=0.5)
     ax2.tick_params(direction="in", length=2, width=0.5)
     lns = p1 + p2
     labs = [l.get_label() for l in lns]
     ax1.legend(lns, labs, loc=0, frameon=False)
-    plotname = path + "/pp_variations.png"
-    plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
+
+    if path is not None:
+        plotname = path + "/pp_variations.png"
+        plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
+
     plt.show()
 
     fig, ax1 = plt.subplots()
@@ -535,15 +586,18 @@ def plot_plasma_parameters(data: Field3dData, path: str):
         label=r"$\rho_b$",
     )
     ax2.set_ylabel(r"$\rho_b$")
-    plt.xlim([0, 2 * data.z0])
+    # plt.xlim([0, 2 * data.z0])
     ax1.set_xlabel("z")
     ax1.tick_params(direction="in", length=2, width=0.5)
     ax2.tick_params(direction="in", length=2, width=0.5)
     lns = p1 + p2
     labs = [l.get_label() for l in lns]
     ax1.legend(lns, labs, loc=0, frameon=False)
-    plotname = path + "/pp_background.png"
-    plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
+
+    if path is not None:
+        plotname = path + "/pp_background.png"
+        plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
+
     plt.show()
 
     fig, ax1 = plt.subplots()
@@ -567,15 +621,18 @@ def plot_plasma_parameters(data: Field3dData, path: str):
         label=r"$\rho$",
     )
     ax2.set_ylabel(r"$\rho$")
-    plt.xlim([0, 2 * data.z0])
+    # plt.xlim([0, 2 * data.z0])
     ax1.set_xlabel("z")
     ax1.tick_params(direction="in", length=2, width=0.5)
     ax2.tick_params(direction="in", length=2, width=0.5)
     lns = p1 + p2
     labs = [l.get_label() for l in lns]
     ax1.legend(lns, labs, loc=0, frameon=False)
-    plotname = path + "/pp.png"
-    plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
+
+    if path is not None:
+        plotname = path + "/pp.png"
+        plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
+
     plt.show()
 
 

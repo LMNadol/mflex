@@ -1,3 +1,4 @@
+from __future__ import annotations
 import numpy as np
 from mhsflex.poloidal import phi, dphidz, phi_hypgeo, phi_low, dphidz_hypgeo, dphidz_low
 

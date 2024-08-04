@@ -1,6 +1,9 @@
 from __future__ import annotations
 from dataclasses import dataclass
+
 import numpy as np
+
+import pickle
 
 from functools import cached_property
 
@@ -38,6 +41,21 @@ class Field3dData:
     alpha: float
     z0: np.float64
     deltaz: np.float64
+
+    def save(self, path):
+        for name, attribute in self.__dict__.items():
+            name = ".".join((name, "pkl"))
+            with open("/".join((path, name)), "wb") as f:
+                pickle.dump(attribute, f)
+
+    @classmethod
+    def load(cls, path):
+        my_model = {}
+        for name in cls.__annotations__:
+            file_name = ".".join((name, "pkl"))
+            with open("/".join((path, file_name)), "rb") as f:
+                my_model[name] = pickle.load(f)
+        return cls(**my_model)
 
     @cached_property
     def btemp(self) -> np.ndarray:
@@ -137,7 +155,12 @@ class Field3dData:
         )  # magnetic pressure b0**2 / 2mu0 in kg/(s^2m)
         BETA0 = P0 / PB0  # Plasma Beta, ration plasma to magnetic pressure
 
-        return B0**2.0 / MU0 * 10**-8 * (BETA0 / 2.0 * bp_matrix + self.dpressure)
+        return (
+            B0**2.0
+            / MU0
+            * 10**-8
+            * (BETA0 / 2.0 * bp_matrix + self.dpressure / B0**2.0)
+        )
 
     @cached_property
     def fdensity(self) -> np.ndarray:
@@ -161,7 +184,10 @@ class Field3dData:
             B0**2.0
             / (MU0 * G_SOLAR)
             * 10**-14
-            * (BETA0 / (2.0 * H) * T0 / T_PHOTOSPHERE * bd_matrix + self.ddensity)
+            * (
+                BETA0 / (2.0 * H) * T0 / T_PHOTOSPHERE * bd_matrix
+                + self.ddensity / B0**2.0
+            )
         )
 
 
@@ -197,3 +223,126 @@ def calculate_magfield(
     )
 
     return data
+
+
+def btemp_linear(
+    field3d: Field3dData, heights: np.ndarray, temps: np.ndarray
+) -> np.ndarray:
+
+    temp = np.zeros_like(field3d.z)
+
+    if len(heights) != len(temps):
+        raise ValueError("Number of heights and temperatures do not match")
+
+    for iz, z in enumerate(field3d.z):
+
+        h_index = 0
+
+        for i in range(0, len(heights) - 1):
+            if z >= heights[i] and z <= heights[i + 1]:
+                h_index = i
+
+        temp[iz] = temps[h_index] + (temps[h_index + 1] - temps[h_index]) / (
+            heights[h_index + 1] - heights[h_index]
+        ) * (z - heights[h_index])
+
+    return temp
+
+
+def bpressure_linear(
+    field3d: Field3dData, heights: np.ndarray, temps: np.ndarray
+) -> np.ndarray:
+
+    temp = np.zeros_like(field3d.z)
+
+    for iheight, height in enumerate(heights):
+        if height == field3d.z0:
+            t0 = temps[iheight]
+
+    h = KB * t0 / (MBAR * G_SOLAR) * 10**-6
+
+    for iz, z in enumerate(field3d.z):
+
+        h_index = 0
+
+        for i in range(0, len(heights) - 1):
+            if heights[i] <= z <= heights[i + 1]:
+                h_index = i
+
+        pro = 1.0
+        for j in range(0, h_index):
+            qj = (temps[j + 1] - temps[j]) / (heights[j + 1] - heights[j])
+            expj = -t0 / (h * qj)
+            tempj = (
+                abs(temps[j] + qj * (heights[j + 1] - heights[j])) / temps[j]
+            ) ** expj
+            pro = pro * tempj
+
+        q = (temps[h_index + 1] - temps[h_index]) / (
+            heights[h_index + 1] - heights[h_index]
+        )
+        tempz = (abs(temps[h_index] + q * (z - heights[h_index])) / temps[h_index]) ** (
+            -t0 / (h * q)
+        )
+
+        temp[iz] = pro * tempz
+
+    return temp
+
+
+def bdensity_linear(
+    field3d: Field3dData, heights: np.ndarray, temps: np.ndarray
+) -> np.ndarray:
+
+    temp0 = temps[0]
+    dummypres = bpressure_linear(field3d, heights, temps)
+    dummytemp = btemp_linear(field3d, heights, temps)
+
+    return dummypres / dummytemp * temp0
+
+
+def fpressure_linear(
+    field3d: Field3dData, heights: np.ndarray, temps: np.ndarray
+) -> np.ndarray:
+
+    bp_matrix = np.zeros_like(field3d.dpressure)
+    bp_matrix[:, :, :] = bpressure_linear(field3d, heights, temps)
+
+    B0 = field3d.field[
+        :, :, 0, 2
+    ].max()  # Gauss background magnetic field strength in 10^-4 kg/(s^2A) = 10^-4 T
+    PB0 = (B0 * 10**-4) ** 2 / (2 * MU0)  # magnetic pressure b0**2 / 2mu0 in kg/(s^2m)
+    BETA0 = P0 / PB0  # Plasma Beta, ration plasma to magnetic pressure
+
+    return (
+        B0**2.0 / MU0 * 10**-8 * (BETA0 / 2.0 * bp_matrix + field3d.dpressure / B0**2.0)
+    )
+
+
+def fdensity_linear(
+    field3d: Field3dData, heights: np.ndarray, temps: np.ndarray
+) -> np.ndarray:
+
+    for iheight, height in enumerate(heights):
+        if height == field3d.z0:
+            t0 = temps[iheight]
+
+    h = KB * t0 / (MBAR * G_SOLAR) * 10**-6
+    B0 = field3d.field[
+        :, :, 0, 2
+    ].max()  # Gauss background magnetic field strength in 10^-4 kg/(s^2A) = 10^-4 T
+    PB0 = (B0 * 10**-4) ** 2 / (2 * MU0)  # magnetic pressure b0**2 / 2mu0 in kg/(s^2m)
+    BETA0 = P0 / PB0  # Plasma Beta, ration plasma to magnetic pressure
+
+    bd_matrix = np.zeros_like(field3d.ddensity)
+    bd_matrix[:, :, :] = bdensity_linear(field3d, heights, temps)
+
+    return (
+        B0**2.0
+        / (MU0 * G_SOLAR)
+        * 10**-14
+        * (
+            BETA0 / (2.0 * h) * t0 / T_PHOTOSPHERE * bd_matrix
+            + field3d.ddensity / B0**2.0
+        )
+    )

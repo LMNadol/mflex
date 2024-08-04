@@ -1,3 +1,4 @@
+from __future__ import annotations
 import numpy as np
 from scipy.special import jv, gamma, hyp2f1
 from numba import njit
