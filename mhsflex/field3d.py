@@ -156,9 +156,8 @@ class Field3dData:
         BETA0 = P0 / PB0  # Plasma Beta, ration plasma to magnetic pressure
 
         return (
-            B0**2.0
+            (B0 * 10**-4) ** 2.0
             / MU0
-            * 10**-8
             * (BETA0 / 2.0 * bp_matrix + self.dpressure / B0**2.0)
         )
 
