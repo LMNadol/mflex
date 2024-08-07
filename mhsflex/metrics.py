@@ -12,84 +12,6 @@ from msat.pyvis.fieldline3d import fieldline3d
 from mhsflex.field3d import Field3dData
 
 
-def compare_field3d(data_ref: Field3dData, data_rec: Field3dData) -> None:
-
-    nx = data_ref.nx
-    ny = data_ref.ny
-
-    b_ref = data_ref.field[nx : 2 * nx, ny : 2 * ny, :, :]
-    b_rec = data_rec.field[nx : 2 * nx, ny : 2 * ny, :, :]
-
-    VC = VecCorr(b_ref, b_rec)
-    CS = CauSchw(b_ref, b_rec)
-    NE = NormErr(b_ref, b_rec)
-    ME = MeanErr(b_ref, b_rec)
-    MAGE = MagEnergy(b_ref, b_rec)
-
-    print("MAGNETIC FIELD VECTOR METRICS")
-    print(
-        "-----------------------------------------------------------------------------------------------------------"
-    )
-    print(
-        "Vector correlation metric: ",
-        VC,
-        "(Reference value: ",
-        VecCorr(b_ref, b_ref),
-        ")",
-    )
-    print(
-        "Cauchy-Schwarz metric: ",
-        CS,
-        "(Reference value: ",
-        CauSchw(b_ref, b_ref),
-        ")",
-    )
-    print(
-        "Normalised vector error metric: ",
-        NE,
-        "(Reference value: ",
-        NormErr(b_ref, b_ref),
-        ")",
-    )
-    print(
-        "Mean vector error metric: ",
-        ME,
-        "(Reference value: ",
-        MeanErr(b_ref, b_ref),
-        ")",
-    )
-    print(
-        "Magnetic energy metric: ",
-        MAGE,
-        "(Reference value: ",
-        MagEnergy(b_ref, b_ref),
-        ")",
-    )
-    print(
-        "-----------------------------------------------------------------------------------------------------------"
-    )
-    print("FIELD LINE DIVERGENCE METRIC")
-    print(
-        "-----------------------------------------------------------------------------------------------------------"
-    )
-
-    ratioclosed = field_div_metric(data_ref, data_rec)
-
-    print(
-        "Percentage of footpoints with error smaller than 10 percent of all closed fieldlines: ",
-        ratioclosed,
-    )
-    print(
-        "-----------------------------------------------------------------------------------------------------------"
-    )
-    print("PLASMA PARAMETER PEARSON CORRELATION COEFFICIENT METRICS")
-    print(
-        "-----------------------------------------------------------------------------------------------------------"
-    )
-
-    pres_ref, den_ref, pres_rec, den_rec = pearson_corr_coeff(data_ref, data_rec)
-
-
 def VecCorr(B: np.ndarray, b: np.ndarray) -> np.float64:
     """
     Returns Vector Correlation metric of B : B_ref and b : B_rec.
@@ -155,7 +77,9 @@ def MeanErr(B: np.ndarray, b: np.ndarray) -> np.float64:
 
 
 def MagEnergy(B: np.ndarray, b: np.ndarray) -> np.float64:
-
+    """
+    Returns Magnetic Energy metric of B : B_ref and b : B_rec.
+    """
     if B.shape != b.shape:
         raise ValueError("Field sizes do not match.")
 
@@ -446,3 +370,81 @@ def pearson_corr_coeff_issi(
         "Pearson Correlation actual value for density ",
         pearsonr(den_surface_rec.flatten(), den_surface_ref.flatten()),
     )
+
+
+def compare_field3d(data_ref: Field3dData, data_rec: Field3dData) -> None:
+
+    nx = data_ref.nx
+    ny = data_ref.ny
+
+    b_ref = data_ref.field[nx : 2 * nx, ny : 2 * ny, :, :]
+    b_rec = data_rec.field[nx : 2 * nx, ny : 2 * ny, :, :]
+
+    VC = VecCorr(b_ref, b_rec)
+    CS = CauSchw(b_ref, b_rec)
+    NE = NormErr(b_ref, b_rec)
+    ME = MeanErr(b_ref, b_rec)
+    MAGE = MagEnergy(b_ref, b_rec)
+
+    print("MAGNETIC FIELD VECTOR METRICS")
+    print(
+        "-----------------------------------------------------------------------------------------------------------"
+    )
+    print(
+        "Vector correlation metric: ",
+        VC,
+        "(Reference value: ",
+        VecCorr(b_ref, b_ref),
+        ")",
+    )
+    print(
+        "Cauchy-Schwarz metric: ",
+        CS,
+        "(Reference value: ",
+        CauSchw(b_ref, b_ref),
+        ")",
+    )
+    print(
+        "Normalised vector error metric: ",
+        NE,
+        "(Reference value: ",
+        NormErr(b_ref, b_ref),
+        ")",
+    )
+    print(
+        "Mean vector error metric: ",
+        ME,
+        "(Reference value: ",
+        MeanErr(b_ref, b_ref),
+        ")",
+    )
+    print(
+        "Magnetic energy metric: ",
+        MAGE,
+        "(Reference value: ",
+        MagEnergy(b_ref, b_ref),
+        ")",
+    )
+    print(
+        "-----------------------------------------------------------------------------------------------------------"
+    )
+    print("FIELD LINE DIVERGENCE METRIC")
+    print(
+        "-----------------------------------------------------------------------------------------------------------"
+    )
+
+    ratioclosed = field_div_metric(data_ref, data_rec)
+
+    print(
+        "Percentage of footpoints with error smaller than 10 percent of all closed fieldlines: ",
+        ratioclosed,
+    )
+    print(
+        "-----------------------------------------------------------------------------------------------------------"
+    )
+    print("PLASMA PARAMETER PEARSON CORRELATION COEFFICIENT METRICS")
+    print(
+        "-----------------------------------------------------------------------------------------------------------"
+    )
+
+    pres_ref, den_ref, pres_rec, den_rec = pearson_corr_coeff(data_ref, data_rec)

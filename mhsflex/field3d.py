@@ -42,6 +42,8 @@ class Field3dData:
     z0: np.float64
     deltaz: np.float64
 
+    tanh: bool
+
     def save(self, path):
         for name, attribute in self.__dict__.items():
             name = ".".join((name, "pkl"))
@@ -116,7 +118,16 @@ class Field3dData:
         z_matrix = np.zeros_like(bz_matrix)
         z_matrix[:, :, :] = self.z
 
-        return -f(z_matrix, self.z0, self.deltaz, self.a, self.b) * bz_matrix**2.0 / 2.0
+        if self.tanh:
+            return (
+                -f(z_matrix, self.z0, self.deltaz, self.a, self.b)
+                * bz_matrix**2.0
+                / 2.0
+            )
+        else:
+            kappa = 1 / self.z0
+            a = self.a * (1 - np.tanh(-self.z0 / self.deltaz))
+            return -f_low(z_matrix, a, kappa) * bz_matrix**2.0 / 2.0
 
     @cached_property
     def ddensity(self) -> np.ndarray:
@@ -136,10 +147,20 @@ class Field3dData:
             * self.dfield[self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 2]
         )
 
-        return (
-            dfdz(z_matrix, self.z0, self.deltaz, self.a, self.b) * bz_matrix**2 / 2.0
-            + f(z_matrix, self.z0, self.deltaz, self.a, self.b) * bdotbz_matrix
-        )
+        if self.tanh:
+            return (
+                dfdz(z_matrix, self.z0, self.deltaz, self.a, self.b)
+                * bz_matrix**2
+                / 2.0
+                + f(z_matrix, self.z0, self.deltaz, self.a, self.b) * bdotbz_matrix
+            )
+        else:
+            kappa = 1 / self.z0
+            a = self.a * (1 - np.tanh(-self.z0 / self.deltaz))
+            return (
+                dfdz_low(z_matrix, a, kappa) * bz_matrix**2 / 2.0
+                + f_low(z_matrix, a, kappa) * bdotbz_matrix
+            )
 
     @cached_property
     def fpressure(self) -> np.ndarray:
@@ -219,6 +240,7 @@ def calculate_magfield(
         alpha=alpha,
         z0=z0,
         deltaz=deltaz,
+        tanh=tanh,
     )
 
     return data
