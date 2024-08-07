@@ -38,10 +38,10 @@ class Field2dData:
             px_arcsec = hdr["CDELT1"]
             py_arcsec = hdr["CDELT2"]
 
-        stx = int(input("First pixel x axis: "))
-        lstx = int(input("Last pixel x axis: "))
-        sty = int(input("First pixel y axis: "))
-        lsty = int(input("Last pixel y axis: "))
+        stx = 400  # int(input("First pixel x axis: "))
+        lstx = 1200  # int(input("Last pixel x axis: "))
+        sty = 500  # int(input("First pixel y axis: "))
+        lsty = 1000  # int(input("Last pixel y axis: "))
 
         image = image[sty:lsty, stx:lstx]
 

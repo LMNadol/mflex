@@ -12,19 +12,19 @@ from msat.pyvis.fieldline3d import fieldline3d
 from mhsflex.field3d import Field3dData
 
 
-def compare_field3d(data_ref: Field3dData, data_rec: Field3dData) -> Tuple:
-
-    b_ref = data_ref.field
-    b_rec = data_rec.field
+def compare_field3d(data_ref: Field3dData, data_rec: Field3dData) -> None:
 
     nx = data_ref.nx
     ny = data_ref.ny
 
-    VC = VecCorr(b_ref, b_rec, nx, ny)
-    CS = CauSchw(b_ref, b_rec, nx, ny)
-    NE = NormErr(b_ref, b_rec, nx, ny)
-    ME = MeanErr(b_ref, b_rec, nx, ny)
-    MAGE = MagEnergy(b_ref, b_rec, nx, ny)
+    b_ref = data_ref.field[nx : 2 * nx, ny : 2 * ny, :, :]
+    b_rec = data_rec.field[nx : 2 * nx, ny : 2 * ny, :, :]
+
+    VC = VecCorr(b_ref, b_rec)
+    CS = CauSchw(b_ref, b_rec)
+    NE = NormErr(b_ref, b_rec)
+    ME = MeanErr(b_ref, b_rec)
+    MAGE = MagEnergy(b_ref, b_rec)
 
     print("MAGNETIC FIELD VECTOR METRICS")
     print(
@@ -34,69 +34,63 @@ def compare_field3d(data_ref: Field3dData, data_rec: Field3dData) -> Tuple:
         "Vector correlation metric: ",
         VC,
         "(Reference value: ",
-        VecCorr(b_ref, b_ref, nx, ny),
+        VecCorr(b_ref, b_ref),
         ")",
     )
     print(
         "Cauchy-Schwarz metric: ",
         CS,
         "(Reference value: ",
-        CauSchw(b_ref, b_ref, nx, ny),
+        CauSchw(b_ref, b_ref),
         ")",
     )
     print(
         "Normalised vector error metric: ",
         NE,
         "(Reference value: ",
-        NormErr(b_ref, b_ref, nx, ny),
+        NormErr(b_ref, b_ref),
         ")",
     )
     print(
         "Mean vector error metric: ",
         ME,
         "(Reference value: ",
-        MeanErr(b_ref, b_ref, nx, ny),
+        MeanErr(b_ref, b_ref),
         ")",
     )
     print(
         "Magnetic energy metric: ",
         MAGE,
         "(Reference value: ",
-        MagEnergy(b_ref, b_ref, nx, ny),
+        MagEnergy(b_ref, b_ref),
         ")",
     )
-    # print(
-    #     "-----------------------------------------------------------------------------------------------------------"
-    # )
-    # print("FIELD LINE DIVERGENCE METRIC")
-    # print(
-    #     "-----------------------------------------------------------------------------------------------------------"
-    # )
+    print(
+        "-----------------------------------------------------------------------------------------------------------"
+    )
+    print("FIELD LINE DIVERGENCE METRIC")
+    print(
+        "-----------------------------------------------------------------------------------------------------------"
+    )
 
-    # ratioall, ratioclosed = field_div_metric(data_ref, data_rec)
+    ratioclosed = field_div_metric(data_ref, data_rec)
 
-    # print(
-    #     "Percentage of footpoints with error smaller than 10 percent of all fieldlines: ",
-    #     ratioall,
-    # )
-    # print(
-    #     "Percentage of footpoints with error smaller than 10 percent of all closed fieldlines: ",
-    #     ratioclosed,
-    # )
-    # print(
-    #     "-----------------------------------------------------------------------------------------------------------"
-    # )
-    # print("PLASMA PARAMETER PEARSON CORRELATION COEFFICIENT METRICS")
-    # print(
-    #     "-----------------------------------------------------------------------------------------------------------"
-    # )
+    print(
+        "Percentage of footpoints with error smaller than 10 percent of all closed fieldlines: ",
+        ratioclosed,
+    )
+    print(
+        "-----------------------------------------------------------------------------------------------------------"
+    )
+    print("PLASMA PARAMETER PEARSON CORRELATION COEFFICIENT METRICS")
+    print(
+        "-----------------------------------------------------------------------------------------------------------"
+    )
 
-    # pres_ref, den_ref, pres_rec, den_rec = pearson_corr_coeff(data_ref, data_rec)
-
-    return VC, CS, NE, ME, MAGE  # , ratioall, ratioclosed, pres_rec, den_rec
+    pres_ref, den_ref, pres_rec, den_rec = pearson_corr_coeff(data_ref, data_rec)
 
 
-def VecCorr(B: np.ndarray, b: np.ndarray, nx: np.int32, ny: np.int32) -> np.float64:
+def VecCorr(B: np.ndarray, b: np.ndarray) -> np.float64:
     """
     Returns Vector Correlation metric of B : B_ref and b : B_rec.
     """
@@ -104,24 +98,18 @@ def VecCorr(B: np.ndarray, b: np.ndarray, nx: np.int32, ny: np.int32) -> np.floa
     if B.shape != b.shape:
         raise ValueError("Field sizes do not match.")
 
-    B = B[nx : 2 * nx, ny : 2 * ny, :, :]
-    b = b[nx : 2 * nx, ny : 2 * ny, :, :]
-
     return np.sum(np.multiply(B, b)) / np.sqrt(
         np.sum(np.multiply(B, B)) * np.sum(np.multiply(b, b))
     )
 
 
-def CauSchw(B: np.ndarray, b: np.ndarray, nx: np.int32, ny: np.int32) -> np.float64:
+def CauSchw(B: np.ndarray, b: np.ndarray) -> np.float64:
     """
     Returns Cauchy Schwarz metric of B : B_ref and b : B_rec.
     """
 
     if B.shape != b.shape:
         raise ValueError("Field sizes do not match.")
-
-    B = B[nx : 2 * nx, ny : 2 * ny, :, :]
-    b = b[nx : 2 * nx, ny : 2 * ny, :, :]
 
     div = np.multiply(
         np.sqrt(B[:, :, :, 0] ** 2 + B[:, :, :, 1] ** 2 + B[:, :, :, 2] ** 2),
@@ -137,7 +125,7 @@ def CauSchw(B: np.ndarray, b: np.ndarray, nx: np.int32, ny: np.int32) -> np.floa
     return np.sum(np.divide(num, div)) / (B.shape[0] * B.shape[1] * B.shape[2])
 
 
-def NormErr(B: np.ndarray, b: np.ndarray, nx: np.int32, ny: np.int32) -> np.float64:
+def NormErr(B: np.ndarray, b: np.ndarray) -> np.float64:
     """
     Returns Normalised Vector Error metric of B : B_ref and b : B_rec.
     """
@@ -145,24 +133,18 @@ def NormErr(B: np.ndarray, b: np.ndarray, nx: np.int32, ny: np.int32) -> np.floa
     if B.shape != b.shape:
         raise ValueError("Field sizes do not match.")
 
-    B = B[nx : 2 * nx, ny : 2 * ny, :, :]
-    b = b[nx : 2 * nx, ny : 2 * ny, :, :]
-
     return np.sqrt(np.sum(np.multiply(B - b, B - b))) / np.sqrt(
         np.sum(np.multiply(B, B))
     )
 
 
-def MeanErr(B: np.ndarray, b: np.ndarray, nx: np.int32, ny: np.int32) -> np.float64:
+def MeanErr(B: np.ndarray, b: np.ndarray) -> np.float64:
     """
     Returns Mean Vector Error metric of B : B_ref and b : B_rec.
     """
 
     if B.shape != b.shape:
         raise ValueError("Field sizes do not match.")
-
-    B = B[nx : 2 * nx, ny : 2 * ny, :, :]
-    b = b[nx : 2 * nx, ny : 2 * ny, :, :]
 
     div = np.sqrt(B[:, :, :, 0] ** 2 + B[:, :, :, 1] ** 2 + B[:, :, :, 2] ** 2)
 
@@ -172,13 +154,10 @@ def MeanErr(B: np.ndarray, b: np.ndarray, nx: np.int32, ny: np.int32) -> np.floa
     return np.sum(np.divide(num, div)) / (B.shape[0] * B.shape[1] * B.shape[2])
 
 
-def MagEnergy(B: np.ndarray, b: np.ndarray, nx: np.int32, ny: np.int32) -> np.float64:
+def MagEnergy(B: np.ndarray, b: np.ndarray) -> np.float64:
 
     if B.shape != b.shape:
         raise ValueError("Field sizes do not match.")
-
-    B = B[nx : 2 * nx, ny : 2 * ny, :, :]
-    b = b[nx : 2 * nx, ny : 2 * ny, :, :]
 
     return np.sum(np.multiply(b, b)) / np.sum(np.multiply(B, B))
 
@@ -186,7 +165,7 @@ def MagEnergy(B: np.ndarray, b: np.ndarray, nx: np.int32, ny: np.int32) -> np.fl
 def field_div_metric(
     dataB: Field3dData,
     datab: Field3dData,
-) -> Tuple:
+) -> np.float64:
     """
     Returns Field Line Divergence metric of B : B_ref and b : B_rec.
     xmin, ymin, ymax as when using plot_fieldline_grid.
@@ -220,10 +199,10 @@ def field_div_metric(
     y_big = np.arange(2.0 * datab.ny) * 2.0 * ymax / (2.0 * datab.ny - 1) - ymax
     z_arr = np.arange(datab.nz) * (zmax - zmin) / (datab.nz - 1) + zmin
 
-    x_0 = 0.0
-    y_0 = 0.0
-    dx = xmax / 18.0
-    dy = ymax / 18.0
+    x_0 = 1.0 * 10**-8
+    y_0 = 1.0 * 10**-8
+    dx = xmax / (datab.nx / 5.0)
+    dy = ymax / (datab.ny / 5.0)
 
     nlinesmaxx = math.floor(xmax / dx)
     nlinesmaxy = math.floor(ymax / dy)
@@ -315,6 +294,7 @@ def field_div_metric(
                 valid_fieldline = False
             if not np.isclose(fieldline_rec[len_rec - 1, 2], 0.0):
                 valid_fieldline = False
+
             if not (0.0 <= fieldline_ref[len_ref - 1, 1] <= xmax):
                 valid_fieldline = False
             if not (0.0 <= fieldline_rec[len_rec - 1, 1] <= xmax):
@@ -358,7 +338,7 @@ def field_div_metric(
                     count = count + 1
 
     # return number of footpoints with error smaller than 10 percent as percentage of all footpoints, of all closed fieldlines
-    return np.float64(count / count_all), np.float64(count / count_closed)
+    return np.float64(count / count_closed)
 
 
 def pearson_corr_coeff(
@@ -421,7 +401,7 @@ def pearson_corr_coeff_issi(
     fpres_3d_ref: np.ndarray,
     fden_3d_ref: np.ndarray,
     datab: Field3dData,
-) -> Tuple:
+) -> None:
     """
     B : B_ref and b : B_rec.
     Returns line-of-sigth integration (using composite trapezoidal rule) with respect to
@@ -436,10 +416,6 @@ def pearson_corr_coeff_issi(
     """
 
     zmin, zmax = datab.z[0], datab.z[-1]
-
-    if datab.field.shape != fpres_3d_ref.shape:
-        raise ValueError("Fields not of same size.")
-
     z_arr = np.arange(datab.nz) * (zmax - zmin) / (datab.nz - 1) + zmin
 
     pres_surface_ref = np.zeros((datab.ny, datab.nx))
@@ -449,8 +425,8 @@ def pearson_corr_coeff_issi(
 
     for ix in range(datab.nx):
         for iy in range(datab.ny):
-            pres_surface_ref[iy, ix] = np.trapz(fpres_3d_ref[ix, iy, :], z_arr)
-            den_surface_ref[iy, ix] = np.trapz(fden_3d_ref[ix, iy, :], z_arr)
+            pres_surface_ref[iy, ix] = np.trapz(fpres_3d_ref[:, ix, iy], z_arr)
+            den_surface_ref[iy, ix] = np.trapz(fden_3d_ref[:, ix, iy], z_arr)
             pres_surface_rec[iy, ix] = np.trapz(datab.fpressure[iy, ix, :], z_arr)
             den_surface_rec[iy, ix] = np.trapz(datab.fdensity[iy, ix, :], z_arr)
 
@@ -470,5 +446,3 @@ def pearson_corr_coeff_issi(
         "Pearson Correlation actual value for density ",
         pearsonr(den_surface_rec.flatten(), den_surface_ref.flatten()),
     )
-
-    return pres_surface_ref, den_surface_ref, pres_surface_rec, den_surface_rec
