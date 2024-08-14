@@ -94,6 +94,8 @@ def plot(
         [t.set_va("center") for t in ax.get_zticklabels()]  # type: ignore
         [t.set_ha("center") for t in ax.get_zticklabels()]  # type: ignore
 
+        # ax.set_zlim([0, 2 * data.z0]) # FOR ZOOM
+
     if view == "angular":
         ax.view_init(30, 240, 0)  # type: ignore
 
@@ -142,7 +144,7 @@ def find_center(data: Field3dData) -> Tuple:
         data.z[-1],
     )
 
-    neighborhood_size = data.nx / 10
+    neighborhood_size = data.nx / 1.3
     threshold = 1.0
 
     data_max = maximum_filter(data.bz, neighborhood_size)  # mode ='reflect'
@@ -252,7 +254,7 @@ def show_footpoints(data: Field3dData) -> None:
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.contourf(
-        np.outer(data.y, np.ones(data.ny)).T,
+        np.outer(data.x, np.ones(data.ny)).T,
         np.outer(data.y, np.ones(data.nx)),
         data.bz,
         1000,
@@ -263,8 +265,8 @@ def show_footpoints(data: Field3dData) -> None:
     plt.tick_params(direction="in", length=2, width=0.5)
     ax.set_box_aspect(ymax / xmax)
 
-    for ix in range(0, data.nx, int(data.nx / 27)):
-        for iy in range(0, data.ny, int(data.ny / 27)):
+    for ix in range(0, data.nx, int(data.nx / 40)):
+        for iy in range(0, data.ny, int(data.ny / 30)):
             if sources[iy, ix] != 0:
                 ax.scatter(
                     ix / (data.nx / xmax),
@@ -320,7 +322,7 @@ def plot_magnetogram(data: Field3dData, ax) -> None:
     ax.set_zlim(zmin, zmax)  # type: ignore
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
-    ax.set_box_aspect((ymax, xmax, zmax))  # type : ignore
+    ax.set_box_aspect((xmax, ymax, zmax))  # type : ignore # (xmax, ymax, 2 * data.z0)
 
     ax.xaxis._axinfo["tick"]["inward_factor"] = 0.2  # type : ignore
     ax.xaxis._axinfo["tick"]["outward_factor"] = 0  # type : ignore
@@ -373,10 +375,10 @@ def plot_fieldlines_footpoints(
     boxedges[0, 1] = xmin
     boxedges[1, 1] = xmax
     boxedges[0, 2] = zmin
-    boxedges[1, 2] = zmax
+    boxedges[1, 2] = zmax  # 2 * data.z0  # FOR ZOOM
 
-    for ix in range(0, data.nx, int(data.nx / 28)):
-        for iy in range(0, data.ny, int(data.ny / 28)):
+    for ix in range(0, data.nx, int(data.nx / 30)):
+        for iy in range(0, data.ny, int(data.ny / 30)):
             if sources[iy, ix] != 0 or sinks[iy, ix] != 0:
 
                 x_start = ix / (data.nx / xmax)

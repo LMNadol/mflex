@@ -55,9 +55,23 @@ def NormErr(B: np.ndarray, b: np.ndarray) -> np.float64:
     if B.shape != b.shape:
         raise ValueError("Field sizes do not match.")
 
-    return np.sqrt(np.sum(np.multiply(B - b, B - b))) / np.sqrt(
-        np.sum(np.multiply(B, B))
+    # return np.sum(np.sqrt(np.multiply(B - b, B - b))) / np.sum(
+    #     np.sqrt(np.multiply(B, B))
+    # )
+
+    diff = B - b
+
+    temp = np.sqrt(
+        diff[:, :, :, 0] ** 2 + diff[:, :, :, 1] ** 2 + diff[:, :, :, 2] ** 2
     )
+
+    num = np.sum(temp)
+
+    temp2 = np.sqrt(B[:, :, :, 0] ** 2 + B[:, :, :, 1] ** 2 + B[:, :, :, 2] ** 2)
+
+    div = np.sum(temp2)
+
+    return np.divide(num, div)
 
 
 def MeanErr(B: np.ndarray, b: np.ndarray) -> np.float64:

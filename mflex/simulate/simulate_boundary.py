@@ -7,8 +7,8 @@ def dipole(x: np.float64, y: np.float64) -> np.float64:
     inspired by Neukirch and Wiegelmann (2019).
     """
 
-    xx = np.pi * (x - 1.0)
-    yy = np.pi * (y - 1.0)
+    xx = np.pi * (x / 10.0 - 1.0)
+    yy = np.pi * (y / 10.0 - 1.0)
     mu_x1 = 1.2 / np.pi + 1.0
     mu_y1 = mu_x1
     mu_x2 = -mu_x1
