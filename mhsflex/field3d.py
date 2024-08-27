@@ -343,7 +343,7 @@ def fpressure_linear(
     PB0 = (B0 * 10**-4) ** 2 / (2 * MU0)  # magnetic pressure b0**2 / 2mu0 in kg/(s^2m)
     BETA0 = P0 / PB0  # Plasma Beta, ration plasma to magnetic pressure
 
-    return BETA0 / 2.0 * bp_matrix + field3d.dpressure  # * (B0 * 10**-4) ** 2.0 / MU0
+    return (BETA0 / 2.0 * bp_matrix + field3d.dpressure) * (B0 * 10**-4) ** 2.0 / MU0
 
 
 def fdensity_linear(
@@ -365,5 +365,57 @@ def fdensity_linear(
     bd_matrix[:, :, :] = bdensity_linear(field3d, heights, temps)
 
     return (
-        BETA0 / (2.0 * H) * T0 / T_PHOTOSPHERE * bd_matrix + field3d.ddensity
-    )  # * (B0 * 10**-4) ** 2.0/ (MU0 * G_SOLAR * L)
+        (BETA0 / (2.0 * H) * T0 / T_PHOTOSPHERE * bd_matrix + field3d.ddensity)
+        * (B0 * 10**-4) ** 2.0
+        / (MU0 * G_SOLAR * L)
+    )
+
+
+def j3d(field3d: Field3dData) -> np.ndarray:
+    """
+    Return current density, calucated from magnetic field as
+    j = (alpha B + curl(0,0,f(z)Bz))/ mu0.
+    """
+
+    j = np.zeros_like(field3d.field)
+
+    j[:, :, :, 2] = field3d.alpha * field3d.field[:, :, :, 2]
+
+    f_matrix = np.zeros_like(field3d.dfield[:, :, :, 0])
+    f_matrix[:, :, :] = f(field3d.z, field3d.z0, field3d.deltaz, field3d.a, field3d.b)
+
+    j[:, :, :, 0] = (
+        field3d.alpha * field3d.field[:, :, :, 1]
+        + f_matrix * field3d.dfield[:, :, :, 0]
+    )
+
+    j[:, :, :, 1] = (
+        field3d.alpha * field3d.field[:, :, :, 0]
+        + f_matrix * field3d.dfield[:, :, :, 1]
+    )
+    return j / MU0
+
+
+def lf3d(field3d: Field3dData) -> np.ndarray:
+    """
+    Calculate Lorentz force.
+    """
+
+    j = j3d(field3d)
+
+    lf = np.zeros_like(field3d.field)
+
+    lf[:, :, :, 0] = (
+        j[:, :, :, 1] * field3d.field[:, :, :, 2]
+        - j[:, :, :, 2] * field3d.field[:, :, :, 1]
+    )
+    lf[:, :, :, 1] = (
+        j[:, :, :, 2] * field3d.field[:, :, :, 0]
+        - j[:, :, :, 0] * field3d.field[:, :, :, 2]
+    )
+    lf[:, :, :, 2] = (
+        j[:, :, :, 0] * field3d.field[:, :, :, 1]
+        - j[:, :, :, 1] * field3d.field[:, :, :, 0]
+    )
+
+    return lf

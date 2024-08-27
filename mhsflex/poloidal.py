@@ -78,6 +78,7 @@ def phi_low(
     Returns poloidal component of magnetic field vector using
     height profile by Low (1991, 1992).
     """
+
     return jv(p, q * np.exp(-z * kappa / 2.0)) / jv(p, q)
 
 
@@ -96,8 +97,7 @@ def dphidz_low(
             - p * jv(p, q * np.exp(-z * kappa / 2.0))
         )
         * kappa
-        / 2.0
-        / jv(p, q)
+        / (2.0 * jv(p, q))
     )
 
 

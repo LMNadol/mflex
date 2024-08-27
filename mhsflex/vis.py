@@ -39,6 +39,7 @@ def plot(
     footpoints_grid: bool = False,
     save: bool = False,
     path: str | None = None,
+    zoom: bool = False,
 ):
     xmin, xmax, ymin, ymax, zmin, zmax = (
         data.x[0],
@@ -57,7 +58,10 @@ def plot(
         plot_fieldlines_grid(data, ax)
     else:
         sinks, sources = detect_footpoints(data)
-        plot_fieldlines_footpoints(data, sinks, sources, ax)
+        if not zoom:
+            plot_fieldlines_footpoints(data, sinks, sources, ax)
+        else:
+            plot_fieldlines_footpoints_zoom(data, sinks, sources, ax)
 
     if view == "los":
         ax.view_init(90, -90)  # type: ignore
@@ -78,23 +82,36 @@ def plot(
         [t.set_ha("center") for t in ax.get_xticklabels()]  # type: ignore
 
     if view == "side":
-        ax.view_init(0, -90)  # type: ignore
-        ax.set_xlabel("x", labelpad=5)
-        ax.set_zlabel("z", labelpad=10)  # type: ignore
+        if not zoom:
+            ax.view_init(0, -90)  # type: ignore
+            ax.set_xlabel("x", labelpad=5)
+            ax.set_zlabel("z", labelpad=10)  # type: ignore
 
-        ax.set_xticks(np.arange(0, xmax + 1.0 * 10**-8, xmax / 5))
-        ax.set_zticks(np.arange(0, zmax + 1.0 * 10**-8, zmax / 5))  # type: ignore
+            ax.set_xticks(np.arange(0, xmax + 1.0 * 10**-8, xmax / 5))
+            ax.set_zticks(np.arange(0, zmax + 1.0 * 10**-8, zmax / 5))  # type: ignore
 
-        ax.set_yticklabels([])  # type: ignore
-        ax.set_ylabel("")
+            ax.set_yticklabels([])  # type: ignore
+            ax.set_ylabel("")
 
-        [t.set_va("center") for t in ax.get_xticklabels()]  # type: ignore
-        [t.set_ha("center") for t in ax.get_xticklabels()]  # type: ignore
+            [t.set_va("center") for t in ax.get_xticklabels()]  # type: ignore
+            [t.set_ha("center") for t in ax.get_xticklabels()]  # type: ignore
 
-        [t.set_va("center") for t in ax.get_zticklabels()]  # type: ignore
-        [t.set_ha("center") for t in ax.get_zticklabels()]  # type: ignore
+            [t.set_va("center") for t in ax.get_zticklabels()]  # type: ignore
+            [t.set_ha("center") for t in ax.get_zticklabels()]  # type: ignore
+        else:
+            ax.view_init(0, -90)
+            ax.set_xticks(np.arange(0, xmax + 1.0 * 10**-8, xmax / 5))
+            ax.set_zticks(np.arange(0, 2 * data.z0 + 1.0 * 10**-8, zmax / 5))
+            ax.set_xlabel("x", labelpad=50)
+            ax.set_zlabel("z", labelpad=-1)  # type: ignore
+            ax.set_yticklabels([])  # type: ignore
+            ax.set_ylabel("")
 
-        # ax.set_zlim([0, 2 * data.z0]) # FOR ZOOM
+            [t.set_va("top") for t in ax.get_xticklabels()]  # type: ignore
+            [t.set_ha("center") for t in ax.get_xticklabels()]  # type: ignore
+
+            [t.set_va("center") for t in ax.get_zticklabels()]  # type: ignore
+            [t.set_ha("center") for t in ax.get_zticklabels()]  # type: ignore
 
     if view == "angular":
         ax.view_init(30, 240, 0)  # type: ignore
@@ -116,9 +133,14 @@ def plot(
 
         assert path is not None
 
+        if not zoom:
+            temp = "/fieldlines_"
+        else:
+            temp = "fieldlines_zoom_"
+
         plotname = (
             path
-            + "/fieldlines_"
+            + temp
             + str(data.a)
             + "_"
             + str(data.alpha)
@@ -265,8 +287,8 @@ def show_footpoints(data: Field3dData) -> None:
     plt.tick_params(direction="in", length=2, width=0.5)
     ax.set_box_aspect(ymax / xmax)
 
-    for ix in range(0, data.nx, int(data.nx / 40)):
-        for iy in range(0, data.ny, int(data.ny / 30)):
+    for ix in range(0, data.nx, int(data.nx / 15)):
+        for iy in range(0, data.ny, int(data.ny / 15)):
             if sources[iy, ix] != 0:
                 ax.scatter(
                     ix / (data.nx / xmax),
@@ -377,6 +399,93 @@ def plot_fieldlines_footpoints(
     boxedges[0, 2] = zmin
     boxedges[1, 2] = zmax  # 2 * data.z0  # FOR ZOOM
 
+    for ix in range(0, data.nx, int(data.nx / 20)):
+        for iy in range(0, data.ny, int(data.ny / 20)):
+            if sources[iy, ix] != 0 or sinks[iy, ix] != 0:
+
+                x_start = ix / (data.nx / xmax)
+                y_start = iy / (data.ny / ymax)
+
+                if data.bz[int(y_start), int(x_start)] < 0.0:
+                    h1 = -h1
+
+                ystart = [y_start, x_start, 0.0]
+
+                fieldline = fieldline3d(
+                    ystart,
+                    data.field,
+                    y_big,
+                    x_big,
+                    data.z,
+                    h1,
+                    hmin,
+                    hmax,
+                    eps,
+                    oneway=False,
+                    boxedge=boxedges,
+                    gridcoord=False,
+                    coordsystem="cartesian",
+                )  # , periodicity='xy')
+
+                if np.isclose(fieldline[:, 2][-1], 0.0) and np.isclose(
+                    fieldline[:, 2][0], 0.0
+                ):
+                    # Need to give row direction first/ Y, then column direction/ X
+                    ax.plot(
+                        fieldline[:, 1],
+                        fieldline[:, 0],
+                        fieldline[:, 2],
+                        color=c2,
+                        linewidth=0.5,
+                        zorder=4000,
+                    )
+                else:
+                    ax.plot(
+                        fieldline[:, 1],
+                        fieldline[:, 0],
+                        fieldline[:, 2],
+                        color=c2,
+                        linewidth=0.5,
+                        zorder=4000,
+                    )
+
+
+def plot_fieldlines_footpoints_zoom(
+    data: Field3dData, sinks: np.ndarray, sources: np.ndarray, ax
+):
+    xmin, xmax, ymin, ymax, zmin, zmax = (
+        data.x[0],
+        data.x[-1],
+        data.y[0],
+        data.y[-1],
+        data.z[0],
+        data.z[-1],
+    )
+
+    ax.set_zlim(zmin, 2 * data.z0)
+    ax.set_zticks(np.arange(0, 2 * data.z0 + 1, 2))
+    ax.set_box_aspect((xmax, ymax, 4 * data.z0))
+
+    x_big = np.arange(2.0 * data.nx) * 2.0 * xmax / (2.0 * data.nx - 1) - xmax
+    y_big = np.arange(2.0 * data.ny) * 2.0 * ymax / (2.0 * data.ny - 1) - ymax
+
+    h1 = 1.0 / 100.0  # Initial step length for fieldline3D
+    eps = 1.0e-8
+    # Tolerance to which we require point on field line known for fieldline3D
+    hmin = 0.0  # Minimum step length for fieldline3D
+    hmax = 1.0  # Maximum step length for fieldline3D
+
+    # Limit fieldline plot to original data size (rather than Seehafer size)
+    boxedges = np.zeros((2, 3))
+
+    # # Y boundaries must come first, X second due to switched order explained above
+    boxedges[0, 0] = ymin
+    boxedges[1, 0] = ymax
+    boxedges[0, 1] = xmin
+    boxedges[1, 1] = xmax
+    boxedges[0, 2] = zmin
+    boxedges[1, 2] = 2 * data.z0  # FOR ZOOM
+
     for ix in range(0, data.nx, int(data.nx / 30)):
         for iy in range(0, data.ny, int(data.ny / 30)):
             if sources[iy, ix] != 0 or sinks[iy, ix] != 0:
@@ -442,8 +551,8 @@ def plot_fieldlines_grid(data: Field3dData, ax) -> None:
     x_big = np.arange(2.0 * data.nx) * 2.0 * xmax / (2.0 * data.nx - 1) - xmax
     y_big = np.arange(2.0 * data.ny) * 2.0 * ymax / (2.0 * data.ny - 1) - ymax
 
-    x_0 = 0.0
-    y_0 = 0.0
+    x_0 = 0.0000001
+    y_0 = 0.0000001
     dx = xmax / 18.0
     dy = ymax / 18.0
 

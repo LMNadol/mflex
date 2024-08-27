@@ -124,6 +124,7 @@ def get_phi_dphi(
                 p = p_arr[iy, ix]
                 for iz in range(0, int(nresol_z)):
                     z = z_arr[iz]
+
                     phi_arr[iy, ix, iz] = phi_low(z, p, q, kappa)
                     dphidz_arr[iy, ix, iz] = dphidz_low(z, p, q, kappa)
 
@@ -174,6 +175,8 @@ def b3d(
 
     k2 = np.outer(ky**2, ones) + np.outer(ones, kx**2)
     k2[0, 0] = (np.pi / lxn) ** 2 + (np.pi / lyn) ** 2
+    k2[1, 0] = (np.pi / lxn) ** 2 + (np.pi / lyn) ** 2
+    k2[0, 1] = (np.pi / lxn) ** 2 + (np.pi / lyn) ** 2
 
     seehafer = mirror(field.bz)
 
@@ -197,10 +200,13 @@ def b3d(
         )
     else:
         # print("Do exp")
-        kappa = 1 / z0
-        a = a * (1 - np.tanh(-z0 / deltaz))
+        aL = a * (1 - np.tanh(-z0 / deltaz))
+
+        kappa = -np.log(a / aL) / z0
+
         p = 2.0 / kappa * np.sqrt(k2 - alpha**2)
-        q = 2.0 / kappa * np.sqrt(k2 * a)
+        q = 2.0 / kappa * np.sqrt(k2 * aL)
+
         phi, dphi = get_phi_dphi(
             field.z,
             q,

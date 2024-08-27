@@ -82,10 +82,10 @@ class Field2dData:
 
         hdr = hmi_image.fits_header
 
-        sty = int(input("Lower boundary latitute: "))
-        lsty = int(input("Upper boundary latitute:  "))
-        stx = int(input("Lower boundary longitude: "))
-        lstx = int(input("Upper boundary longitude: "))
+        sty = int(input("Upper boundary latitute: "))
+        lsty = int(input("Upper boundary longitude:  "))
+        stx = int(input("Lower boundary latitute: "))
+        lstx = int(input("Lower boundary longitude: "))
 
         left_corner = SkyCoord(
             Tx=lsty * u.arcsec, Ty=sty * u.arcsec, frame=hmi_image.coordinate_frame
@@ -131,3 +131,24 @@ class Field2dData:
         z = np.arange(nz) * (zmax - zmin) / (nz - 1) - zmin
 
         return Field2dData(nx, ny, nz, nf, px, py, pz, x, y, z, image.data)
+
+
+def check_fluxbalance(data: Field2dData) -> float:
+    """
+    Summation of flux through the bottom boundary (photospheric Bz) normalised
+    by the sum of absolute values. Value between -1 and 1, corresponding to entirely
+    outward and inward flux, respectively. Can (probably) consider values between
+    -0.01 and 0.01 as flux-balanced, such that the application of Seehafer is not
+    necessary.
+    """
+    return np.sum(data.bz) / np.sum(np.fabs(data.bz))
+
+
+def alpha_HS04(bx: np.ndarray, by: np.ndarray, bz: np.ndarray) -> float:
+    """
+    "Optimal" alpha calculated according to Hagino and Sakurai (2004).
+    Alpha is calculated from the vertical electric current in the photosphere
+    (from horizontal photospheric field) and the photospheric vertical magnetic field.
+    """
+    Jz = np.gradient(by, axis=1) - np.gradient(bx, axis=0)
+    return np.sum(Jz * np.sign(bz)) / np.sum(np.fabs(bz))

@@ -11,6 +11,8 @@ from msat.pyvis.fieldline3d import fieldline3d
 
 from mhsflex.field3d import Field3dData
 
+from mhsflex.field3d import fpressure_linear, fdensity_linear
+
 
 def VecCorr(B: np.ndarray, b: np.ndarray) -> np.float64:
     """
@@ -339,6 +341,8 @@ def pearson_corr_coeff_issi(
     fpres_3d_ref: np.ndarray,
     fden_3d_ref: np.ndarray,
     datab: Field3dData,
+    heights: np.ndarray,
+    temps: np.ndarray,
 ) -> None:
     """
     B : B_ref and b : B_rec.
@@ -365,8 +369,12 @@ def pearson_corr_coeff_issi(
         for iy in range(datab.ny):
             pres_surface_ref[iy, ix] = np.trapz(fpres_3d_ref[:, ix, iy], z_arr)
             den_surface_ref[iy, ix] = np.trapz(fden_3d_ref[:, ix, iy], z_arr)
-            pres_surface_rec[iy, ix] = np.trapz(datab.fpressure[iy, ix, :], z_arr)
-            den_surface_rec[iy, ix] = np.trapz(datab.fdensity[iy, ix, :], z_arr)
+            pres_surface_rec[iy, ix] = np.trapz(
+                fpressure_linear(datab, heights, temps)[iy, ix, :], z_arr
+            )
+            den_surface_rec[iy, ix] = np.trapz(
+                fdensity_linear(datab, heights, temps)[iy, ix, :], z_arr
+            )
 
     print(
         "Pearson Correlation reference value for pressure ",
