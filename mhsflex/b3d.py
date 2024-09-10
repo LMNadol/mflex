@@ -59,11 +59,11 @@ def fftcoeff(
     if nresol_x % 2 == 0:
         centre_x = int(nresol_x / 2)
     else:
-        centre_x = int((nresol_x + 1) / 2)
+        centre_x = int((nresol_x - 1) / 2)
     if nresol_y % 2 == 0:
         centre_y = int(nresol_y / 2)
     else:
-        centre_y = int((nresol_y + 1) / 2)
+        centre_y = int((nresol_y - 1) / 2)
 
     for ix in range(nf_max):
         for iy in range(nf_max):

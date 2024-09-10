@@ -136,7 +136,7 @@ def plot(
         if not zoom:
             temp = "/fieldlines_"
         else:
-            temp = "fieldlines_zoom_"
+            temp = "/fieldlines_zoom_"
 
         plotname = (
             path
@@ -150,6 +150,7 @@ def plot(
             + view
             + ".png"
         )
+
         plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
 
     plt.show()
@@ -220,7 +221,7 @@ def show_poles(data: Field3dData):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     # ax.grid(color="white", linestyle="dotted", linewidth=0.5)
-    ax.contourf(y_plot, x_plot, data.bz, 1000, cmap=cmap)
+    ax.contourf(y_plot, x_plot, data.bz, 1000, cmap=cmap)  # , norm=norm)
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     plt.tick_params(direction="in", length=2, width=0.5)
@@ -281,14 +282,15 @@ def show_footpoints(data: Field3dData) -> None:
         data.bz,
         1000,
         cmap=cmap,
+        # norm=norm,
     )
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     plt.tick_params(direction="in", length=2, width=0.5)
     ax.set_box_aspect(ymax / xmax)
 
-    for ix in range(0, data.nx, int(data.nx / 15)):
-        for iy in range(0, data.ny, int(data.ny / 15)):
+    for ix in range(0, data.nx, int(data.nx / 40)):
+        for iy in range(0, data.ny, int(data.ny / 40)):
             if sources[iy, ix] != 0:
                 ax.scatter(
                     ix / (data.nx / xmax),
@@ -332,7 +334,6 @@ def plot_magnetogram(data: Field3dData, ax) -> None:
         y_grid[data.ny : 2 * data.ny, data.nx : 2 * data.nx],
         data.bz,
         1000,
-        # norm=norm,
         cmap=cmap,
         offset=0.0,
     )
@@ -399,8 +400,8 @@ def plot_fieldlines_footpoints(
     boxedges[0, 2] = zmin
     boxedges[1, 2] = zmax  # 2 * data.z0  # FOR ZOOM
 
-    for ix in range(0, data.nx, int(data.nx / 20)):
-        for iy in range(0, data.ny, int(data.ny / 20)):
+    for ix in range(0, data.nx, int(data.nx / 30)):
+        for iy in range(0, data.ny, int(data.ny / 30)):
             if sources[iy, ix] != 0 or sinks[iy, ix] != 0:
 
                 x_start = ix / (data.nx / xmax)
@@ -486,9 +487,9 @@ def plot_fieldlines_footpoints_zoom(
     boxedges[0, 2] = zmin
     boxedges[1, 2] = 2 * data.z0  # FOR ZOOM
 
-    for ix in range(0, data.nx, int(data.nx / 30)):
-        for iy in range(0, data.ny, int(data.ny / 30)):
-            if sources[iy, ix] != 0 or sinks[iy, ix] != 0:
+    for ix in range(0, data.nx, int(data.nx / 28)):
+        for iy in range(0, data.ny, int(data.ny / 28)):
+            if sources[iy, ix] != 0:  # or sinks[iy, ix] != 0:
 
                 x_start = ix / (data.nx / xmax)
                 y_start = iy / (data.ny / ymax)

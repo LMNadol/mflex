@@ -1,13 +1,15 @@
 from __future__ import annotations
-from dataclasses import dataclass
-
 import numpy as np
+from mhsflex.b3d import get_phi_dphi
+
+from mhsflex.field2d import Field2dData
+from typing import Tuple
+
+from dataclasses import dataclass
 
 import pickle
 
 from functools import cached_property
-
-from mhsflex.b3d import b3d
 
 from mhsflex.field2d import Field2dData
 
@@ -219,16 +221,6 @@ class Field3dData:
             BETA0 / (2.0 * H) * T0 / T_PHOTOSPHERE * bd_matrix + self.ddensity
         )  #  *(B0 * 10**-4) ** 2.0 / (MU0 * G_SOLAR * L)
 
-    @cached_property
-    def lf3D(self) -> np.ndarray:
-
-        return lf3d(self)
-
-    @cached_property
-    def j3D(self) -> np.ndarray:
-
-        return j3d(self)
-
 
 def calculate_magfield(
     field2d: Field2dData,
@@ -241,7 +233,7 @@ def calculate_magfield(
     tanh=True,
 ) -> Field3dData:
 
-    mf3d, dbz3d = b3d(field2d, a, b, alpha, z0, deltaz, asymptotic, tanh)
+    mf3d, dbz3d = b3d_fb(field2d, a, b, alpha, z0, deltaz, asymptotic, tanh)
 
     data = Field3dData(
         nx=field2d.nx,
@@ -390,19 +382,19 @@ def j3d(field3d: Field3dData) -> np.ndarray:
 
     j = np.zeros_like(field3d.field)
 
-    j[:, :, :, 2] = field3d.alpha * field3d.field[:, :, :, 2] * 10**-4
+    j[:, :, :, 2] = field3d.alpha * field3d.field[:, :, :, 2]
 
     f_matrix = np.zeros_like(field3d.dfield[:, :, :, 0])
     f_matrix[:, :, :] = f(field3d.z, field3d.z0, field3d.deltaz, field3d.a, field3d.b)
 
     j[:, :, :, 0] = (
-        field3d.alpha * field3d.field[:, :, :, 1] * 10**-4
-        + f_matrix * field3d.dfield[:, :, :, 0] * 10**-4
+        field3d.alpha * field3d.field[:, :, :, 1]
+        + f_matrix * field3d.dfield[:, :, :, 0]
     )
 
     j[:, :, :, 1] = (
-        field3d.alpha * field3d.field[:, :, :, 0] * 10**-4
-        + f_matrix * field3d.dfield[:, :, :, 1] * 10**-4
+        field3d.alpha * field3d.field[:, :, :, 0]
+        + f_matrix * field3d.dfield[:, :, :, 1]
     )
     return j / MU0
 
@@ -417,16 +409,277 @@ def lf3d(field3d: Field3dData) -> np.ndarray:
     lf = np.zeros_like(field3d.field)
 
     lf[:, :, :, 0] = (
-        j[:, :, :, 1] * field3d.field[:, :, :, 2] * 10**-4
-        - j[:, :, :, 2] * field3d.field[:, :, :, 1] * 10**-4
+        j[:, :, :, 1] * field3d.field[:, :, :, 2]
+        - j[:, :, :, 2] * field3d.field[:, :, :, 1]
     )
     lf[:, :, :, 1] = (
-        j[:, :, :, 2] * field3d.field[:, :, :, 0] * 10**-4
-        - j[:, :, :, 0] * field3d.field[:, :, :, 2] * 10**-4
+        j[:, :, :, 2] * field3d.field[:, :, :, 0]
+        - j[:, :, :, 0] * field3d.field[:, :, :, 2]
     )
     lf[:, :, :, 2] = (
-        j[:, :, :, 0] * field3d.field[:, :, :, 1] * 10**-4
-        - j[:, :, :, 1] * field3d.field[:, :, :, 0] * 10**-4
+        j[:, :, :, 0] * field3d.field[:, :, :, 1]
+        - j[:, :, :, 1] * field3d.field[:, :, :, 0]
     )
 
     return lf
+
+
+def fftcoeff_fb(
+    data_bz: np.ndarray,
+    nf_max: np.int32,
+) -> Tuple:
+
+    anm = np.zeros((nf_max, nf_max))
+    bnm = np.zeros((nf_max, nf_max))
+    cnm = np.zeros((nf_max, nf_max))
+    dnm = np.zeros((nf_max, nf_max))
+
+    nresol_y = int(data_bz.shape[0])
+    nresol_x = int(data_bz.shape[1])
+
+    signal = np.fft.fftshift(np.fft.fft2(data_bz) / nresol_x / nresol_y)
+
+    for ix in range(0, nresol_x, 2):
+        for iy in range(1, nresol_y, 2):
+            temp = signal[iy, ix]
+            signal[iy, ix] = -temp
+
+    for ix in range(1, nresol_x, 2):
+        for iy in range(0, nresol_y, 2):
+            temp = signal[iy, ix]
+            signal[iy, ix] = -temp
+
+    if nresol_x % 2 == 0:
+        centre_x = int(nresol_x / 2)
+    else:
+        centre_x = int((nresol_x - 1) / 2)
+    if nresol_y % 2 == 0:
+        centre_y = int(nresol_y / 2)
+    else:
+        centre_y = int((nresol_y - 1) / 2)
+
+    for ix in range(1, nf_max):
+        for iy in range(1, nf_max):
+            anm[iy, ix] = (
+                -signal[centre_y + iy, centre_x + ix]
+                + signal[centre_y + iy, centre_x - ix]
+                + signal[centre_y - iy, centre_x + ix]
+                - signal[centre_y - iy, centre_x - ix]
+            ).real
+            bnm[iy, ix] = (
+                -signal[centre_y + iy, centre_x + ix]
+                + signal[centre_y + iy, centre_x - ix]
+                - signal[centre_y - iy, centre_x + ix]
+                + signal[centre_y - iy, centre_x - ix]
+            ).imag
+            cnm[iy, ix] = (
+                -signal[centre_y + iy, centre_x + ix]
+                + signal[centre_y - iy, centre_x + ix]
+                - signal[centre_y + iy, centre_x - ix]
+                + signal[centre_y - iy, centre_x - ix]
+            ).imag
+            dnm[iy, ix] = (
+                signal[centre_y + iy, centre_x + ix]
+                + signal[centre_y + iy, centre_x - ix]
+                + signal[centre_y - iy, centre_x + ix]
+                + signal[centre_y - iy, centre_x - ix]
+            ).real
+
+    for iy in range(1, nf_max):
+        dnm[iy, 0] = (
+            signal[centre_y + iy, centre_x + 0] + signal[centre_y - iy, centre_x + 0]
+        ).real
+        cnm[iy, 0] = (
+            -signal[centre_y + iy, centre_x + 0] + signal[centre_y - iy, centre_x + 0]
+        ).imag
+
+    for ix in range(1, nf_max):
+        dnm[0, ix] = (
+            signal[centre_y + 0, centre_x + ix] + signal[centre_y + 0, centre_x - ix]
+        ).real
+        bnm[0, ix] = (
+            -signal[centre_y + 0, centre_x + ix] + signal[centre_y + 0, centre_x - ix]
+        ).imag
+
+    return anm, bnm, cnm, dnm
+
+
+def b3d_fb(
+    field: Field2dData,
+    a: float,
+    b: float,
+    alpha: float,
+    z0: np.float64,
+    deltaz: np.float64,
+    asymptotic=True,
+    tanh=True,
+) -> Tuple:
+
+    nf = int(np.floor(field.nf / 2))
+
+    l = 1.0
+    lx = field.nx * field.px * l
+    ly = field.ny * field.py * l
+
+    lxn = lx / l
+    lyn = ly / l
+
+    kx = np.arange(nf) * 2.0 * np.pi / lxn
+    ky = np.arange(nf) * 2.0 * np.pi / lyn
+    ones = 0.0 * np.arange(nf) + 1.0
+
+    ky_grid = np.outer(ky, ones)
+    kx_grid = np.outer(ones, kx)
+
+    k2 = np.outer(ky**2, ones) + np.outer(ones, kx**2)
+    k2[0, 0] = (2.0 * np.pi / lxn) ** 2 + (2.0 * np.pi / lyn) ** 2
+
+    print(k2.min)
+
+    anm, bnm, cnm, dnm = np.divide(fftcoeff_fb(field.bz, nf), k2)
+
+    if tanh:
+
+        # print("Do tanh")
+        p = 0.5 * deltaz * np.sqrt(k2 * (1.0 - a - a * b) - alpha**2)
+        q = 0.5 * deltaz * np.sqrt(k2 * (1.0 - a + a * b) - alpha**2)
+
+        phi, dphi = get_phi_dphi(
+            field.z,
+            q,
+            p,
+            nf,
+            field.nz,
+            z0=z0,
+            deltaz=deltaz,
+            asymptotic=asymptotic,
+            tanh=tanh,
+        )
+    else:
+        # print("Do exp")
+        aL = a
+        kappa = deltaz
+
+        p = 2.0 / kappa * np.sqrt(k2 - alpha**2)
+        q = 2.0 / kappa * np.sqrt(k2 * aL)
+
+        phi, dphi = get_phi_dphi(
+            field.z,
+            q,
+            p,
+            nf,
+            field.nz,
+            kappa=kappa,
+            asymptotic=asymptotic,
+            tanh=tanh,
+        )
+
+    bfield = np.zeros((field.ny, field.nx, field.nz, 3))
+    dbz = np.zeros((field.ny, field.nx, field.nz, 3))
+
+    sin_x = np.sin(np.outer(kx, field.x - lxn / 2.0))
+    sin_y = np.sin(np.outer(ky, field.y - lyn / 2.0))
+    cos_x = np.cos(np.outer(kx, field.x - lxn / 2.0))
+    cos_y = np.cos(np.outer(ky, field.y - lyn / 2.0))
+
+    # print("b", b.shape)
+
+    for iz in range(0, field.nz):
+
+        coeffs1 = np.multiply(np.multiply(k2, phi[:, :, iz]), anm)
+        coeffs2 = np.multiply(np.multiply(k2, phi[:, :, iz]), bnm)
+        coeffs3 = np.multiply(np.multiply(k2, phi[:, :, iz]), cnm)
+        coeffs4 = np.multiply(np.multiply(k2, phi[:, :, iz]), dnm)
+
+        bfield[:, :, iz, 2] = (
+            np.matmul(sin_y.T, np.matmul(coeffs1, sin_x))
+            + np.matmul(cos_y.T, np.matmul(coeffs2, sin_x))
+            + np.matmul(sin_y.T, np.matmul(coeffs3, cos_x))
+            + np.matmul(cos_y.T, np.matmul(coeffs4, cos_x))
+        )
+
+        coeffs1 = np.multiply(
+            np.multiply(anm, dphi[:, :, iz]), ky_grid
+        ) + alpha * np.multiply(np.multiply(dnm, phi[:, :, iz]), kx_grid)
+        coeffs2 = -np.multiply(
+            np.multiply(dnm, dphi[:, :, iz]), ky_grid
+        ) - alpha * np.multiply(np.multiply(anm, phi[:, :, iz]), kx_grid)
+        coeffs3 = -np.multiply(
+            np.multiply(bnm, dphi[:, :, iz]), ky_grid
+        ) + alpha * np.multiply(np.multiply(cnm, phi[:, :, iz]), kx_grid)
+        coeffs4 = np.multiply(
+            np.multiply(cnm, dphi[:, :, iz]), ky_grid
+        ) - alpha * np.multiply(np.multiply(bnm, phi[:, :, iz]), kx_grid)
+
+        bfield[:, :, iz, 0] = (
+            np.matmul(cos_y.T, np.matmul(coeffs4, cos_x))
+            + np.matmul(sin_y.T, np.matmul(coeffs3, sin_x))
+            + np.matmul(cos_y.T, np.matmul(coeffs1, sin_x))
+            + np.matmul(sin_y.T, np.matmul(coeffs2, cos_x))
+        )
+
+        coeffs1 = -np.multiply(
+            np.multiply(cnm, dphi[:, :, iz]), kx_grid
+        ) - alpha * np.multiply(np.multiply(bnm, phi[:, :, iz]), ky_grid)
+        coeffs2 = np.multiply(
+            np.multiply(bnm, dphi[:, :, iz]), kx_grid
+        ) + alpha * np.multiply(np.multiply(cnm, phi[:, :, iz]), ky_grid)
+        coeffs3 = np.multiply(
+            np.multiply(anm, dphi[:, :, iz]), kx_grid
+        ) - alpha * np.multiply(np.multiply(dnm, phi[:, :, iz]), ky_grid)
+        coeffs4 = -np.multiply(
+            np.multiply(dnm, dphi[:, :, iz]), kx_grid
+        ) + alpha * np.multiply(np.multiply(anm, phi[:, :, iz]), ky_grid)
+
+        bfield[:, :, iz, 1] = (
+            np.matmul(cos_y.T, np.matmul(coeffs2, cos_x))
+            + np.matmul(sin_y.T, np.matmul(coeffs1, sin_x))
+            + np.matmul(sin_y.T, np.matmul(coeffs3, cos_x))
+            + np.matmul(cos_y.T, np.matmul(coeffs4, sin_x))
+        )
+
+        coeffs1 = np.multiply(np.multiply(k2, dphi[:, :, iz]), anm)
+        coeffs2 = np.multiply(np.multiply(k2, dphi[:, :, iz]), bnm)
+        coeffs3 = np.multiply(np.multiply(k2, dphi[:, :, iz]), cnm)
+        coeffs4 = np.multiply(np.multiply(k2, dphi[:, :, iz]), dnm)
+        dbz[:, :, iz, 2] = (
+            np.matmul(sin_y.T, np.matmul(coeffs1, sin_x))
+            + np.matmul(cos_y.T, np.matmul(coeffs2, sin_x))
+            + np.matmul(sin_y.T, np.matmul(coeffs3, cos_x))
+            + np.matmul(cos_y.T, np.matmul(coeffs4, cos_x))
+        )
+
+        coeffs1 = np.multiply(np.multiply(np.multiply(k2, phi[:, :, iz]), anm), kx_grid)
+        coeffs2 = np.multiply(np.multiply(np.multiply(k2, phi[:, :, iz]), bnm), kx_grid)
+        coeffs3 = -np.multiply(
+            np.multiply(np.multiply(k2, phi[:, :, iz]), cnm), kx_grid
+        )
+        coeffs4 = -np.multiply(
+            np.multiply(np.multiply(k2, phi[:, :, iz]), dnm), kx_grid
+        )
+
+        dbz[:, :, iz, 0] = (
+            np.matmul(sin_y.T, np.matmul(coeffs1, cos_x))
+            + np.matmul(cos_y.T, np.matmul(coeffs2, cos_x))
+            + np.matmul(sin_y.T, np.matmul(coeffs3, sin_x))
+            + np.matmul(cos_y.T, np.matmul(coeffs4, sin_x))
+        )
+
+        coeffs1 = np.multiply(np.multiply(np.multiply(k2, phi[:, :, iz]), anm), ky_grid)
+        coeffs2 = -np.multiply(
+            np.multiply(np.multiply(k2, phi[:, :, iz]), bnm), ky_grid
+        )
+        coeffs3 = +np.multiply(
+            np.multiply(np.multiply(k2, phi[:, :, iz]), cnm), ky_grid
+        )
+        coeffs4 = -np.multiply(
+            np.multiply(np.multiply(k2, phi[:, :, iz]), dnm), ky_grid
+        )
+        dbz[:, :, iz, 1] = (
+            np.matmul(cos_y.T, np.matmul(coeffs1, sin_x))
+            + np.matmul(sin_y.T, np.matmul(coeffs2, sin_x))
+            + np.matmul(cos_y.T, np.matmul(coeffs3, cos_x))
+            + np.matmul(sin_y.T, np.matmul(coeffs4, cos_x))
+        )
+
+    return bfield, dbz

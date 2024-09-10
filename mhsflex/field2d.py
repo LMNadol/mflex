@@ -120,7 +120,7 @@ class Field2dData:
 
         xmax = nx * px
         ymax = ny * py
-        zmax = 20.0
+        zmax = 40.0
 
         pz = np.float64(90.0 * 10**-3)
 
