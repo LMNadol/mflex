@@ -1,5 +1,7 @@
 import numpy as np
 from scipy.special import jv, gamma, hyp2f1
+
+# from mpmath import hyp2f1
 from numba import njit
 
 
@@ -100,7 +102,9 @@ def dphidz_low(
     )
 
 
+"""
 # @njit
+# Exchanged with more simple form of hypergeometric Phi as this caused numerical issues
 def phi_hypgeo(
     z: np.float64,
     p: np.ndarray[np.float64, np.dtype[np.float64]],
@@ -113,25 +117,22 @@ def phi_hypgeo(
     eta_d = 1.0 / (1.0 + np.exp(2.0 * w))
 
     if z - z0 < 0.0:
-        phi = (1.0 / (1.0 + np.exp(2.0 * w))) ** (q + p) * np.exp(2.0 * p * w) * gamma(
-            2 * q + 1
-        ) * gamma(-2 * p) / (gamma(q - p) * gamma(q - p + 1)) * hyp2f1(
-            p + q + 1, p + q, 2 * p + 1, 1 - eta_d
+        phi = (
+            (1.0 / (1.0 + np.exp(2.0 * w))) ** (q + p)
+            * np.exp(2.0 * p * w)
+            * gamma(2 * q + 1)
+            * gamma(-2 * p)
+            / (gamma(q - p) * gamma(q - p + 1))
+            * hyp2f1(p + q + 1, p + q, 2 * p + 1, 1 - eta_d)
         ) + (
-            1.0 / (1.0 + np.exp(2.0 * w))
-        ) ** (
-            q - p
-        ) * np.exp(
-            -2.0 * p * w
-        ) * gamma(
-            2 * q + 1
-        ) * gamma(
-            2 * p
-        ) / (
-            gamma(p + q + 1) * gamma(p + q)
-        ) * hyp2f1(
-            q - p, q - p + 1, -2 * p + 1, 1 - eta_d
+            (1.0 / (1.0 + np.exp(2.0 * w))) ** (q - p)
+            * np.exp(-2.0 * p * w)
+            * gamma(2 * q + 1)
+            * gamma(2 * p)
+            / (gamma(p + q + 1) * gamma(p + q))
+            * hyp2f1(q - p, q - p + 1, -2 * p + 1, 1 - eta_d)
         )
+
     else:
         phi = eta_d**q * (1 - eta_d) ** p * hyp2f1(p + q + 1, p + q, 2 * q + 1, eta_d)
 
@@ -159,9 +160,31 @@ def phi_hypgeo(
     )
 
     return phi / phi0
+"""
 
 
+def phi_hypgeo(
+    z: np.float64,
+    p: np.ndarray[np.float64, np.dtype[np.float64]],
+    q: np.ndarray[np.float64, np.dtype[np.float64]],
+    z0: np.float64,
+    deltaz: np.float64,
+):
+
+    w = (z - z0) / deltaz
+    eta_d = 1.0 / (1.0 + np.exp(2.0 * w))
+    phi = eta_d**q * (1 - eta_d) ** p * hyp2f1(p + q + 1, p + q, 2 * q + 1, eta_d)
+
+    w0 = -z0 / deltaz
+    eta0 = 1.0 / (1.0 + np.exp(2.0 * w0))
+    phi0 = eta0**q * (1 - eta0) ** p * hyp2f1(p + q + 1, p + q, 2 * q + 1, eta0)
+
+    return phi / phi0
+
+
+"""
 # @njit
+# Exchanged with more simple form of hypergeometric Phi as this caused numerical issues
 def dphidz_hypgeo(
     z: np.float64,
     p: np.ndarray[np.float64, np.dtype[np.float64]],
@@ -250,6 +273,38 @@ def dphidz_hypgeo(
     ) * hyp2f1(
         q - p, q - p + 1, -2 * p + 1, 1 - eta0
     )
+
+    return -2.0 / deltaz * dphi / phi
+"""
+
+
+def dphidz_hypgeo(
+    z: np.float64,
+    p: np.ndarray[np.float64, np.dtype[np.float64]],
+    q: np.ndarray[np.float64, np.dtype[np.float64]],
+    z0: np.float64,
+    deltaz: np.float64,
+):
+    w = (z - z0) / deltaz
+    eta_d = 1.0 / (1.0 + np.exp(2.0 * w))
+
+    dphi = (
+        q * eta_d**q * (1 - eta_d) ** (p + 1) - p * eta_d ** (q + 1) * (1 - eta_d) ** p
+    ) * hyp2f1(p + q + 1, p + q, 2 * q + 1, eta_d) + (p + q + 1) * (p + q) / (
+        2 * q + 1
+    ) * eta_d ** (
+        q + 1
+    ) * (
+        1 - eta_d
+    ) ** (
+        p + 1
+    ) * hyp2f1(
+        p + q + 2, p + q + 1, 2 * q + 2, eta_d
+    )
+
+    w0 = -z0 / deltaz
+    eta0 = 1.0 / (1.0 + np.exp(2.0 * w0))
+    phi0 = eta0**q * (1 - eta0) ** p * hyp2f1(p + q + 1, p + q, 2 * q + 1, eta0)
 
     return -2.0 / deltaz * dphi / phi0
 
