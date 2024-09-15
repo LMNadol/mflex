@@ -31,6 +31,9 @@ c2 = (0.420, 0.502, 1.000)
 c4 = (1.000, 0.224, 0.376)
 c5 = (1.000, 0.412, 0.816)
 norm = colors.SymLogNorm(50, vmin=-7.5e2, vmax=7.5e2)
+c2 = (0.992, 0.251, 0.733)
+# c2 = (0.784, 0.231, 0.576)
+# c2 = (0.867, 0.871, 0.184)
 
 
 def plot(
@@ -354,9 +357,9 @@ def plot_magnetogram(data: Field3dData, ax) -> None:
     ax.zaxis._axinfo["tick"]["inward_factor"] = 0.2  # type : ignore
     ax.zaxis._axinfo["tick"]["outward_factor"] = 0  # type : ignore
 
-    ax.xaxis.pane.fill = False  # type : ignore
-    ax.yaxis.pane.fill = False  # type : ignore
-    ax.zaxis.pane.fill = False  # type : ignore
+    # ax.xaxis.pane.fill = False  # type : ignore
+    # ax.yaxis.pane.fill = False  # type : ignore
+    # ax.zaxis.pane.fill = False  # type : ignore
 
     [t.set_va("center") for t in ax.get_yticklabels()]  # type : ignore
     [t.set_ha("center") for t in ax.get_yticklabels()]  # type : ignore
