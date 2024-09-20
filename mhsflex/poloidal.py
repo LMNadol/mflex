@@ -35,6 +35,35 @@ def phi(
 
 
 @njit
+def phi_complex(
+    z: np.float64,
+    v: np.ndarray[np.float64, np.dtype[np.float64]],
+    q: np.ndarray[np.float64, np.dtype[np.float64]],
+    z0: np.float64,
+    deltaz: np.float64,
+):
+    """
+    Returns poloidal component of magnetic field vector according
+    to asymptotic approximatio of Neukirch and Wiegelmann (2019).
+    """
+
+    rplus = v / deltaz
+    rminus = q / deltaz
+
+    r = rminus / rplus
+
+    d = np.cos(rplus * z0) + np.multiply(2.0 * r, np.sin(rplus * z0))
+
+    if z - z0 < 0.0:
+        return (
+            np.cos(rplus * (z0 - z)) + np.multiply(2.0 * r, np.sin(rplus * (z0 - z)))
+        ) / d
+
+    else:
+        return np.exp(-2.0 * rminus * (z - z0)) / d
+
+
+@njit
 def dphidz(
     z: np.float64,
     p: np.ndarray[np.float64, np.dtype[np.float64]],
@@ -61,6 +90,42 @@ def dphidz(
                 (
                     np.sinh(2.0 * rplus * (z0 - z))
                     + np.multiply(r, np.cosh(2.0 * rplus * (z0 - z)))
+                ),
+            )
+            / d
+        )
+
+    else:
+        return -2.0 * np.multiply(rminus, np.exp(-2.0 * rminus * (z - z0))) / d
+
+
+@njit
+def dphidz_complex(
+    z: np.float64,
+    v: np.ndarray[np.float64, np.dtype[np.float64]],
+    q: np.ndarray[np.float64, np.dtype[np.float64]],
+    z0: np.float64,
+    deltaz: np.float64,
+):
+    """
+    Returns poloidal component of magnetic field vector according
+    to asymptotic approximatio of Neukirch and Wiegelmann (2019).
+    """
+
+    rplus = v / deltaz
+    rminus = q / deltaz
+
+    r = rminus / rplus
+
+    d = np.cosh(rplus * z0) + np.multiply(2.0 * r, np.sinh(rplus * z0))
+
+    if z - z0 < 0.0:
+        return (
+            -np.multiply(
+                rplus,
+                (
+                    np.sin(rplus * (z0 - z))
+                    + np.multiply(2.0 * r, np.cos(rplus * (z0 - z)))
                 ),
             )
             / d
