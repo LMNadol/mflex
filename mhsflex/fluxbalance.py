@@ -123,9 +123,7 @@ class Field3dData:
     @cached_property
     def dpressure(self) -> np.ndarray:
 
-        bz_matrix = self.field[
-            self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 2
-        ]  # in Gauss
+        bz_matrix = self.field[:, :, :, 2]  # in Gauss
         z_matrix = np.zeros_like(bz_matrix)
         z_matrix[:, :, :] = self.z
 
@@ -146,21 +144,16 @@ class Field3dData:
     @cached_property
     def ddensity(self) -> np.ndarray:
 
-        bz_matrix = self.field[
-            self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 2
-        ]  # in Gauss
+        bz_matrix = self.field[:, :, :, 2]  # in Gauss
         z_matrix = np.zeros_like(bz_matrix)
         z_matrix[:, :, :] = self.z
 
         bdotbz_matrix = np.zeros_like(bz_matrix)
 
         bdotbz_matrix = (
-            self.field[self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 0]
-            * self.dfield[self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 0]
-            + self.field[self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 1]
-            * self.dfield[self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 1]
-            + self.field[self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 2]
-            * self.dfield[self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 2]
+            self.field[:, :, :, 0] * self.dfield[:, :, :, 0]
+            + self.field[:, :, :, 1] * self.dfield[:, :, :, 1]
+            + self.field[:, :, :, 2] * self.dfield[:, :, :, 2]
         )  # in Gauss**2
 
         B0 = self.field[:, :, 0, 2].max()  # in Gauss

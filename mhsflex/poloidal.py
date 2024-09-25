@@ -52,11 +52,12 @@ def phi_complex(
 
     r = rminus / rplus
 
-    d = np.cos(rplus * z0) + np.multiply(2.0 * r, np.sin(rplus * z0))
+    d = np.cos(2.0 * rplus * z0) + np.multiply(r, np.sin(2.0 * rplus * z0))
 
     if z - z0 < 0.0:
         return (
-            np.cos(rplus * (z0 - z)) + np.multiply(2.0 * r, np.sin(rplus * (z0 - z)))
+            np.cos(2.0 * rplus * (z0 - z))
+            + np.multiply(r, np.sin(2.0 * rplus * (z0 - z)))
         ) / d
 
     else:
@@ -117,15 +118,16 @@ def dphidz_complex(
 
     r = rminus / rplus
 
-    d = np.cosh(rplus * z0) + np.multiply(2.0 * r, np.sinh(rplus * z0))
+    d = np.cos(2.0 * rplus * z0) + np.multiply(r, np.sin(2.0 * rplus * z0))
 
     if z - z0 < 0.0:
         return (
-            -np.multiply(
+            2.0
+            * np.multiply(
                 rplus,
                 (
-                    np.sin(rplus * (z0 - z))
-                    + np.multiply(2.0 * r, np.cos(rplus * (z0 - z)))
+                    np.sin(2.0 * rplus * (z0 - z))
+                    - np.multiply(r, np.cos(2.0 * rplus * (z0 - z)))
                 ),
             )
             / d
