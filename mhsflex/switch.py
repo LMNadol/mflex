@@ -26,8 +26,8 @@ def dfdz(
     z: np.ndarray, z0: np.float64, deltaz: np.float64, a: float, b: float
 ) -> np.ndarray:
     """
-    Derivative of height profile of transition non-force-free to force-free
-    according to Neukirch and Wiegelmann (2019).
+    Z-derivative of height profile of transition non-force-free to
+    force-free according to Neukirch and Wiegelmann (2019).
     """
 
     return -a * b / (deltaz * np.cosh((z - z0) / deltaz) ** 2)
@@ -35,7 +35,7 @@ def dfdz(
 
 def dfdz_low(z: np.ndarray, a: float, kappa: float) -> np.ndarray:
     """
-    Derivative of height profile of transition non-force-free to force-free
-    according to Low (1991, 1992).
+    Z-derivative of height profile of transition non-force-free to
+    force-free according to Low (1991, 1992).
     """
     return -kappa * a * np.exp(-kappa * z)

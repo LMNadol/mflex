@@ -28,6 +28,38 @@ L = 10**6  # Lengthscale Mm
 
 @dataclass
 class Field3dData:
+    """
+    Dataclass of type Field3dData with the following attributes:
+    ------------------------------------------------------------------------------------------------------
+    Taken from Field2dData object which Field3dData object is based on:
+    nx, ny, nz  :   Dimensions of 3D magnetic field, usually nx and ny determined by magnetogram size,
+                    while nz defined by user through height to which extrapolation is carried out.
+    nf          :   Number of Fourier modes used in calculation of magnetic field vector, usually
+                    nf = min(nx, ny) is taken. To do: split into nfx, nfy, sucht that all possible modes
+                    in both directions can be used.
+    px, py, pz  :   Pixel sizes in x-, y-, z-direction, in normal length scale (Mm).
+    x, y, z     :   1D arrays of grid points on which magnetic field is given with shapes (nx,), (ny,)
+                    and (nz,) respectively.
+    bz          :   Bottom boundary magentogram of size (ny, nx,). Indexing of vectors done in this order,
+                    such that, following intuition, x-direction corresponds to latitudinal extension and
+                    y-direction to longitudinal extension of the magnetic field.
+    ------------------------------------------------------------------------------------------------------
+    New attributes:
+    field       :   3D magnetic field vector of size (ny, nx, nz, 3,) which contains magnetic field data in
+                    Gauss in the shapes By = field(:, :, :, 0), Bx = field(:, :, :, 1) and
+                    Bz = field(:, :, :, 2).
+    dfield      :   3D vector of size (ny, nx, nz, 3,) containing partial derivatives of Bz in Gauss in the
+                    shape Bzdy = field(:, :, :, 0), Bzdx = field(:, :, :, 1) and Bzdz = field(:, :, :, 2).
+    a           :   Amplitude parameter of function f(z).
+    b           :   Switch parameter of function f(z).
+    alpha       :   Poloidal/toroidal ratio parameter in equation (10) of Neukirch and Wiegelmann (2019).
+    z0          :   Height around which transtion from non-force-free to force-free takes place.
+    deltaz      :   Width of region over which transition from non-force-free to force-free takes place.
+    tanh        :   Boolean paramter determining if Low or N+W/N+W-A height profile is used for calculation
+                    of plasma pressure, plasma density, current density and Lorentz force.
+    ------------------------------------------------------------------------------------------------------
+    """
+
     nx: np.int32
     ny: np.int32
     nz: np.int32
@@ -64,6 +96,9 @@ class Field3dData:
 
     @cached_property
     def btemp(self) -> np.ndarray:
+        """
+        Calculate background temperature according to hyperbolic tangent height profile.
+        """
 
         T0 = (T_PHOTOSPHERE + T_CORONA * np.tanh(self.z0 / self.deltaz)) / (
             1.0 + np.tanh(self.z0 / self.deltaz)
@@ -74,6 +109,9 @@ class Field3dData:
 
     @cached_property
     def bpressure(self) -> np.ndarray:
+        """
+        Calculate background pressure according to hyperbolic tangent height profile.
+        """
 
         T0 = (T_PHOTOSPHERE + T_CORONA * np.tanh(self.z0 / self.deltaz)) / (
             1.0 + np.tanh(self.z0 / self.deltaz)
@@ -104,6 +142,9 @@ class Field3dData:
 
     @cached_property
     def bdensity(self) -> np.ndarray:
+        """
+        Calculate background density according to hyperbolic tangent height profile.
+        """
 
         T0 = (T_PHOTOSPHERE + T_CORONA * np.tanh(self.z0 / self.deltaz)) / (
             1.0 + np.tanh(self.z0 / self.deltaz)
@@ -120,6 +161,9 @@ class Field3dData:
 
     @cached_property
     def dpressure(self) -> np.ndarray:
+        """
+        Calculate variation in pressure described by equation (30) in Neukirch and Wiegelmann (2019).
+        """
 
         bz_matrix = self.field[
             self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 2
@@ -143,6 +187,9 @@ class Field3dData:
 
     @cached_property
     def ddensity(self) -> np.ndarray:
+        """
+        Calculate variation in pressure described by equation (31) in Neukirch and Wiegelmann (2019).
+        """
 
         bz_matrix = self.field[
             self.ny : 2 * self.ny, self.nx : 2 * self.nx, :, 2
@@ -183,6 +230,9 @@ class Field3dData:
 
     @cached_property
     def fpressure(self) -> np.ndarray:
+        """
+        Calculate full pressure described by equation (14) in Neukirch and Wiegelmann (2019).
+        """
 
         bp_matrix = np.zeros_like(self.dpressure)
         bp_matrix[:, :, :] = self.bpressure
@@ -199,6 +249,9 @@ class Field3dData:
 
     @cached_property
     def fdensity(self) -> np.ndarray:
+        """
+        Calculate full density described by equation (15) in Neukirch and Wiegelmann (2019).
+        """
 
         T0 = (T_PHOTOSPHERE + T_CORONA * np.tanh(self.z0 / self.deltaz)) / (
             1.0 + np.tanh(self.z0 / self.deltaz)
@@ -221,11 +274,17 @@ class Field3dData:
 
     @cached_property
     def lf3D(self) -> np.ndarray:
+        """
+        Calculate Lorentz force at all grid points.
+        """
 
         return lf3d(self)
 
     @cached_property
     def j3D(self) -> np.ndarray:
+        """
+        Calculate current density at all grid points.
+        """
 
         return j3d(self)
 
@@ -240,6 +299,9 @@ def calculate_magfield(
     asymptotic=True,
     tanh=True,
 ) -> Field3dData:
+    """
+    Create Field3dData object from Field2dData object and choosen paramters.
+    """
 
     mf3d, dbz3d = b3d(field2d, a, b, alpha, z0, deltaz, asymptotic, tanh)
 
@@ -268,6 +330,10 @@ def calculate_magfield(
 def btemp_linear(
     field3d: Field3dData, heights: np.ndarray, temps: np.ndarray
 ) -> np.ndarray:
+    """
+    Calculate background temperature using linear interpolation between given temperatures temps
+    at given heights heights.
+    """
 
     temp = np.zeros_like(field3d.z)
 
@@ -292,6 +358,9 @@ def btemp_linear(
 def bpressure_linear(
     field3d: Field3dData, heights: np.ndarray, temps: np.ndarray
 ) -> np.ndarray:
+    """
+    Calculate background pressure resulting from linear interpolated temperature btemp_linear.
+    """
 
     temp = np.zeros_like(field3d.z)
 
@@ -333,6 +402,9 @@ def bpressure_linear(
 def bdensity_linear(
     field3d: Field3dData, heights: np.ndarray, temps: np.ndarray
 ) -> np.ndarray:
+    """
+    Calculate background density resulting from linear interpolated temperature btemp_linear.
+    """
 
     temp0 = temps[0]
     dummypres = bpressure_linear(field3d, heights, temps)
@@ -344,6 +416,9 @@ def bdensity_linear(
 def fpressure_linear(
     field3d: Field3dData, heights: np.ndarray, temps: np.ndarray
 ) -> np.ndarray:
+    """
+    Calculate full pressure resulting from linear interpolated temperature btemp_linear.
+    """
 
     bp_matrix = np.zeros_like(field3d.dpressure)
     bp_matrix[:, :, :] = bpressure_linear(field3d, heights, temps)
@@ -360,6 +435,9 @@ def fpressure_linear(
 def fdensity_linear(
     field3d: Field3dData, heights: np.ndarray, temps: np.ndarray
 ) -> np.ndarray:
+    """
+    Calculate full density resulting from linear interpolated temperature btemp_linear.
+    """
 
     for iheight, height in enumerate(heights):
         if height == field3d.z0:
@@ -384,8 +462,7 @@ def fdensity_linear(
 
 def j3d(field3d: Field3dData) -> np.ndarray:
     """
-    Return current density, calucated from magnetic field as
-    j = (alpha B + curl(0,0,f(z)Bz))/ mu0.
+    Return current density, calucated from magnetic field as j = (alpha B + curl(0,0,f(z)Bz))/ mu0.
     """
 
     j = np.zeros_like(field3d.field)

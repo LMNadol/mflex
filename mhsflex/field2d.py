@@ -12,6 +12,21 @@ import sunpy.map
 
 @dataclass
 class Field2dData:
+    """
+    Dataclass of type Field2dData with the following attributes:
+    nx, ny, nz  :   Dimensions of 3D magnetic field, usually nx and ny determined by magnetogram size,
+                    while nz defined by user through height to which extrapolation is carried out.
+    nf          :   Number of Fourier modes used in calculation of magnetic field vector, usually
+                    nf = min(nx, ny) is taken. To do: split into nfx, nfy, sucht that all possible modes
+                    in both directions can be used.
+    px, py, pz  :   Pixel sizes in x-, y-, z-direction, in normal length scale (Mm).
+    x, y, z     :   1D arrays of grid points on which magnetic field is given with shapes (nx,), (ny,)
+                    and (nz,) respectively.
+    bz          :   Bottom boundary magentogram of size (ny, nx,). Indexing of vectors done in this order,
+                    such that, following intuition, x-direction corresponds to latitudinal extension and
+                    y-direction to longitudinal extension of the magnetic field.
+    """
+
     nx: np.int32
     ny: np.int32
     nz: np.int32
@@ -26,6 +41,13 @@ class Field2dData:
 
     @classmethod
     def from_fits_SolOr(cls, path):
+        """
+        Creates dataclass of type Field2dData from SolarOrbiter Archive data in .fits format.
+        Only needs to be handed path to file and the creates Field2dData for extrapolation to 20 Mm
+        (can be adjusted by hand). Most SolarOrbiter images need to be cut for extraplation of a
+        certain active region. No straightforward method to automate this process through user input
+        has been found yet, therefore size of the magnetogram needs to be adjusted by hand by the user.
+        """
 
         with astroopen(path) as data:
 
@@ -77,6 +99,13 @@ class Field2dData:
 
     @classmethod
     def from_fits_SDO(cls, path):
+        """
+        Creates dataclass of type Field2dData from SDO HMI data in .fits format.
+        Only needs to be handed path to file and the creates Field2dData for extrapolation to 20 Mm
+        (can be adjusted by hand). Most HMI images need to be cut for extraplation of a certain active
+        region. No straightforward method to automate this process through user input has been found yet,
+        therefore size of the magnetogram needs to be adjusted by hand by the user.
+        """
 
         hmi_image = sunpy.map.Map(path).rotate()
 
@@ -120,7 +149,7 @@ class Field2dData:
 
         xmax = nx * px
         ymax = ny * py
-        zmax = 40.0
+        zmax = 20.0
 
         pz = np.float64(90.0 * 10**-3)
 

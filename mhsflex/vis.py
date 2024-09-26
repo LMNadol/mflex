@@ -44,6 +44,12 @@ def plot(
     path: str | None = None,
     zoom: bool = False,
 ):
+    """
+    Create figure of magnetic field line from Field3dData object. Specify angle of view and optional zoom
+    for the side view onto the transition region, which footpoints are chosen for field lines,
+    if and where the figure is supposed to be saved.
+    """
+
     xmin, xmax, ymin, ymax, zmin, zmax = (
         data.x[0],
         data.x[-1],
@@ -160,6 +166,9 @@ def plot(
 
 
 def find_center(data: Field3dData) -> Tuple:
+    """
+    Find centres of poles on photospheric magentogram.
+    """
 
     xmin, xmax, ymin, ymax, zmin, zmax = (
         data.x[0],
@@ -206,6 +215,9 @@ def find_center(data: Field3dData) -> Tuple:
 
 
 def show_poles(data: Field3dData):
+    """
+    Show centres of poles on photospheric magentogram.
+    """
 
     x_plot = np.outer(data.y, np.ones(data.nx))
     y_plot = np.outer(data.x, np.ones(data.ny)).T
@@ -251,6 +263,9 @@ def show_poles(data: Field3dData):
 
 
 def detect_footpoints(data: Field3dData) -> Tuple:
+    """
+    Detenct footpoints around centres of poles on photospheric magentogram.
+    """
 
     sinks = data.bz.copy()
     sources = data.bz.copy()
@@ -265,6 +280,9 @@ def detect_footpoints(data: Field3dData) -> Tuple:
 
 
 def show_footpoints(data: Field3dData) -> None:
+    """
+    Show footpoints around centres of poles on photospheric magentogram.
+    """
 
     sinks, sources = detect_footpoints(data)
 
@@ -318,6 +336,9 @@ def show_footpoints(data: Field3dData) -> None:
 
 
 def plot_magnetogram(data: Field3dData, ax) -> None:
+    """
+    Plot photospheric boundary condition as basis for field line figures.
+    """
 
     xmin, xmax, ymin, ymax, zmin, zmax = (
         data.x[0],
@@ -374,6 +395,10 @@ def plot_magnetogram(data: Field3dData, ax) -> None:
 def plot_fieldlines_footpoints(
     data: Field3dData, sinks: np.ndarray, sources: np.ndarray, ax
 ):
+    """
+    Plot field lines starting at detected foot points around poles.
+    """
+
     xmin, xmax, ymin, ymax, zmin, zmax = (
         data.x[0],
         data.x[-1],
@@ -457,6 +482,9 @@ def plot_fieldlines_footpoints(
 def plot_fieldlines_footpoints_zoom(
     data: Field3dData, sinks: np.ndarray, sources: np.ndarray, ax
 ):
+    """
+    Plot field lines starting at detected foot points around poles zoomed into transition region.
+    """
     xmin, xmax, ymin, ymax, zmin, zmax = (
         data.x[0],
         data.x[-1],
@@ -542,6 +570,9 @@ def plot_fieldlines_footpoints_zoom(
 
 
 def plot_fieldlines_grid(data: Field3dData, ax) -> None:
+    """
+    Plot field lines on grid.
+    """
 
     xmin, xmax, ymin, ymax, zmin, zmax = (
         data.x[0],
@@ -629,248 +660,248 @@ def plot_fieldlines_grid(data: Field3dData, ax) -> None:
                 )
 
 
-def plot_plasma_parameters(data: Field3dData, path: str | None = None):
+# def plot_plasma_parameters(data: Field3dData, path: str | None = None):
 
-    ix_max = np.unravel_index(data.bz.argmax(), data.bz.shape)[1]
-    iy_max = np.unravel_index(data.bz.argmax(), data.bz.shape)[0]
+#     ix_max = np.unravel_index(data.bz.argmax(), data.bz.shape)[1]
+#     iy_max = np.unravel_index(data.bz.argmax(), data.bz.shape)[0]
 
-    xmin, xmax, ymin, ymax, zmin, zmax = (
-        data.x[0],
-        data.x[-1],
-        data.y[0],
-        data.y[-1],
-        data.z[0],
-        data.z[-1],
-    )
+#     xmin, xmax, ymin, ymax, zmin, zmax = (
+#         data.x[0],
+#         data.x[-1],
+#         data.y[0],
+#         data.y[-1],
+#         data.z[0],
+#         data.z[-1],
+#     )
 
-    z_arr = np.arange(data.nz) * (zmax - zmin) / (data.nz - 1) + zmin
+#     z_arr = np.arange(data.nz) * (zmax - zmin) / (data.nz - 1) + zmin
 
-    fig, ax1 = plt.subplots()
+#     fig, ax1 = plt.subplots()
 
-    p1 = ax1.plot(
-        z_arr,
-        data.dpressure[iy_max, ix_max, :],
-        linewidth=0.5,
-        linestyle="solid",
-        color=c2,
-        label=r"$\Delta p$",
-    )
-    ax1.set_ylabel(r"$\Delta p$")
-    ax2 = ax1.twinx()
-    p2 = ax2.plot(
-        z_arr,
-        data.ddensity[iy_max, ix_max, :],
-        linewidth=0.5,
-        linestyle="solid",
-        color=c1,
-        label=r"$\Delta \rho$",
-    )
-    ax2.set_ylabel(r"$\Delta \rho$")
-    # plt.xlim([0, 2 * data.z0])
-    ax1.set_xlabel("z")
-    ax1.tick_params(direction="in", length=2, width=0.5)
-    ax2.tick_params(direction="in", length=2, width=0.5)
-    lns = p1 + p2
-    labs = [l.get_label() for l in lns]
-    ax1.legend(lns, labs, loc=0, frameon=False)
+#     p1 = ax1.plot(
+#         z_arr,
+#         data.dpressure[iy_max, ix_max, :],
+#         linewidth=0.5,
+#         linestyle="solid",
+#         color=c2,
+#         label=r"$\Delta p$",
+#     )
+#     ax1.set_ylabel(r"$\Delta p$")
+#     ax2 = ax1.twinx()
+#     p2 = ax2.plot(
+#         z_arr,
+#         data.ddensity[iy_max, ix_max, :],
+#         linewidth=0.5,
+#         linestyle="solid",
+#         color=c1,
+#         label=r"$\Delta \rho$",
+#     )
+#     ax2.set_ylabel(r"$\Delta \rho$")
+#     # plt.xlim([0, 2 * data.z0])
+#     ax1.set_xlabel("z")
+#     ax1.tick_params(direction="in", length=2, width=0.5)
+#     ax2.tick_params(direction="in", length=2, width=0.5)
+#     lns = p1 + p2
+#     labs = [l.get_label() for l in lns]
+#     ax1.legend(lns, labs, loc=0, frameon=False)
 
-    if path is not None:
-        plotname = path + "/pp_variations.png"
-        plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
+#     if path is not None:
+#         plotname = path + "/pp_variations.png"
+#         plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
 
-    plt.show()
+#     plt.show()
 
-    fig, ax1 = plt.subplots()
+#     fig, ax1 = plt.subplots()
 
-    p1 = ax1.plot(
-        z_arr,
-        data.bpressure,
-        linewidth=0.5,
-        linestyle="solid",
-        color=c2,
-        label=r"$p_b$",
-    )
-    ax1.set_ylabel(r"$p_b$")
-    ax2 = ax1.twinx()
-    p2 = ax2.plot(
-        z_arr,
-        data.bdensity,
-        linewidth=0.5,
-        linestyle="solid",
-        color=c1,
-        label=r"$\rho_b$",
-    )
-    ax2.set_ylabel(r"$\rho_b$")
-    # plt.xlim([0, 2 * data.z0])
-    ax1.set_xlabel("z")
-    ax1.tick_params(direction="in", length=2, width=0.5)
-    ax2.tick_params(direction="in", length=2, width=0.5)
-    lns = p1 + p2
-    labs = [l.get_label() for l in lns]
-    ax1.legend(lns, labs, loc=0, frameon=False)
+#     p1 = ax1.plot(
+#         z_arr,
+#         data.bpressure,
+#         linewidth=0.5,
+#         linestyle="solid",
+#         color=c2,
+#         label=r"$p_b$",
+#     )
+#     ax1.set_ylabel(r"$p_b$")
+#     ax2 = ax1.twinx()
+#     p2 = ax2.plot(
+#         z_arr,
+#         data.bdensity,
+#         linewidth=0.5,
+#         linestyle="solid",
+#         color=c1,
+#         label=r"$\rho_b$",
+#     )
+#     ax2.set_ylabel(r"$\rho_b$")
+#     # plt.xlim([0, 2 * data.z0])
+#     ax1.set_xlabel("z")
+#     ax1.tick_params(direction="in", length=2, width=0.5)
+#     ax2.tick_params(direction="in", length=2, width=0.5)
+#     lns = p1 + p2
+#     labs = [l.get_label() for l in lns]
+#     ax1.legend(lns, labs, loc=0, frameon=False)
 
-    if path is not None:
-        plotname = path + "/pp_background.png"
-        plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
+#     if path is not None:
+#         plotname = path + "/pp_background.png"
+#         plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
 
-    plt.show()
+#     plt.show()
 
-    fig, ax1 = plt.subplots()
+#     fig, ax1 = plt.subplots()
 
-    p1 = ax1.plot(
-        z_arr,
-        data.fpressure[iy_max, ix_max, :],
-        linewidth=0.5,
-        linestyle="solid",
-        color=c2,
-        label=r"$p$",
-    )
-    ax1.set_ylabel(r"$p$")
-    ax2 = ax1.twinx()
-    p2 = ax2.plot(
-        z_arr,
-        data.fdensity[iy_max, ix_max, :],
-        linewidth=0.5,
-        linestyle="solid",
-        color=c1,
-        label=r"$\rho$",
-    )
-    ax2.set_ylabel(r"$\rho$")
-    # plt.xlim([0, 2 * data.z0])
-    ax1.set_xlabel("z")
-    ax1.tick_params(direction="in", length=2, width=0.5)
-    ax2.tick_params(direction="in", length=2, width=0.5)
-    lns = p1 + p2
-    labs = [l.get_label() for l in lns]
-    ax1.legend(lns, labs, loc=0, frameon=False)
+#     p1 = ax1.plot(
+#         z_arr,
+#         data.fpressure[iy_max, ix_max, :],
+#         linewidth=0.5,
+#         linestyle="solid",
+#         color=c2,
+#         label=r"$p$",
+#     )
+#     ax1.set_ylabel(r"$p$")
+#     ax2 = ax1.twinx()
+#     p2 = ax2.plot(
+#         z_arr,
+#         data.fdensity[iy_max, ix_max, :],
+#         linewidth=0.5,
+#         linestyle="solid",
+#         color=c1,
+#         label=r"$\rho$",
+#     )
+#     ax2.set_ylabel(r"$\rho$")
+#     # plt.xlim([0, 2 * data.z0])
+#     ax1.set_xlabel("z")
+#     ax1.tick_params(direction="in", length=2, width=0.5)
+#     ax2.tick_params(direction="in", length=2, width=0.5)
+#     lns = p1 + p2
+#     labs = [l.get_label() for l in lns]
+#     ax1.legend(lns, labs, loc=0, frameon=False)
 
-    if path is not None:
-        plotname = path + "/pp.png"
-        plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
+#     if path is not None:
+#         plotname = path + "/pp.png"
+#         plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
 
-    plt.show()
+#     plt.show()
 
 
-def plot_pp_comp(data1: Field3dData, data2: Field3dData, path: str):
+# def plot_pp_comp(data1: Field3dData, data2: Field3dData, path: str):
 
-    if data1.field.shape != data2.field.shape:
-        raise ValueError("Field sizes do not match.")
+#     if data1.field.shape != data2.field.shape:
+#         raise ValueError("Field sizes do not match.")
 
-    xmin, xmax, ymin, ymax, zmin, zmax = (
-        data1.x[0],
-        data1.x[-1],
-        data1.y[0],
-        data1.y[-1],
-        data1.z[0],
-        data1.z[-1],
-    )
+#     xmin, xmax, ymin, ymax, zmin, zmax = (
+#         data1.x[0],
+#         data1.x[-1],
+#         data1.y[0],
+#         data1.y[-1],
+#         data1.z[0],
+#         data1.z[-1],
+#     )
 
-    z_arr = np.arange(data1.nz) * (zmax - zmin) / (data1.nz - 1) + zmin
+#     z_arr = np.arange(data1.nz) * (zmax - zmin) / (data1.nz - 1) + zmin
 
-    fig, ax1 = plt.subplots()
+#     fig, ax1 = plt.subplots()
 
-    plt.plot(
-        z_arr,
-        data1.dpressure[0, 0, :],
-        linewidth=0.4,
-        linestyle="solid",
-        color=c4,
-        alpha=0.5,
-        label="Field A MHS",
-    )
-    plt.plot(
-        z_arr,
-        data2.dpressure[0, 0, :],
-        linewidth=0.4,
-        linestyle="solid",
-        color=c2,
-        alpha=0.5,
-        label="Field B MHS",
-    )
-    for ix in range(1, data1.nx, 10):
-        for iy in range(1, data1.ny, 10):
-            plt.plot(
-                z_arr,
-                data1.dpressure[iy, ix, :],
-                linewidth=0.4,
-                linestyle="solid",
-                color=c4,
-                alpha=0.5,
-            )
-            plt.plot(
-                z_arr,
-                data2.dpressure[iy, ix, :],
-                linewidth=0.4,
-                linestyle="solid",
-                color=c2,
-                alpha=0.5,
-            )
-    plt.plot(
-        z_arr,
-        np.zeros_like(z_arr),
-        linewidth=0.4,
-        linestyle="solid",
-        color="black",
-        label="LLF",
-    )
-    plt.xlim([0, 2 * data1.z0])
-    plt.ylabel(r"$\Delta p$")
-    plt.xlabel("z")
-    plt.legend(frameon=False)
-    plt.tick_params(direction="in", length=2, width=0.5)
-    plotname = path + "/pressurevar_comp.png"
-    plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
-    plt.show()
+#     plt.plot(
+#         z_arr,
+#         data1.dpressure[0, 0, :],
+#         linewidth=0.4,
+#         linestyle="solid",
+#         color=c4,
+#         alpha=0.5,
+#         label="Field A MHS",
+#     )
+#     plt.plot(
+#         z_arr,
+#         data2.dpressure[0, 0, :],
+#         linewidth=0.4,
+#         linestyle="solid",
+#         color=c2,
+#         alpha=0.5,
+#         label="Field B MHS",
+#     )
+#     for ix in range(1, data1.nx, 10):
+#         for iy in range(1, data1.ny, 10):
+#             plt.plot(
+#                 z_arr,
+#                 data1.dpressure[iy, ix, :],
+#                 linewidth=0.4,
+#                 linestyle="solid",
+#                 color=c4,
+#                 alpha=0.5,
+#             )
+#             plt.plot(
+#                 z_arr,
+#                 data2.dpressure[iy, ix, :],
+#                 linewidth=0.4,
+#                 linestyle="solid",
+#                 color=c2,
+#                 alpha=0.5,
+#             )
+#     plt.plot(
+#         z_arr,
+#         np.zeros_like(z_arr),
+#         linewidth=0.4,
+#         linestyle="solid",
+#         color="black",
+#         label="LLF",
+#     )
+#     plt.xlim([0, 2 * data1.z0])
+#     plt.ylabel(r"$\Delta p$")
+#     plt.xlabel("z")
+#     plt.legend(frameon=False)
+#     plt.tick_params(direction="in", length=2, width=0.5)
+#     plotname = path + "/pressurevar_comp.png"
+#     plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
+#     plt.show()
 
-    plt.plot(
-        z_arr,
-        data1.ddensity[0, 0, :],
-        linewidth=0.4,
-        linestyle="solid",
-        color=c4,
-        alpha=0.5,
-        label="Field A MHS",
-    )
-    plt.plot(
-        z_arr,
-        data2.ddensity[0, 0, :],
-        linewidth=0.4,
-        linestyle="solid",
-        color=c2,
-        alpha=0.5,
-        label="Field B MHS",
-    )
-    for ix in range(1, data1.nx, 10):
-        for iy in range(1, data1.ny, 10):
-            plt.plot(
-                z_arr,
-                data1.ddensity[iy, ix, :],
-                linewidth=0.4,
-                linestyle="solid",
-                color=c4,
-                alpha=0.5,
-            )
-            plt.plot(
-                z_arr,
-                data2.ddensity[iy, ix, :],
-                linewidth=0.4,
-                linestyle="solid",
-                color=c2,
-                alpha=0.5,
-            )
-    plt.plot(
-        z_arr,
-        np.zeros_like(z_arr),
-        linewidth=0.4,
-        linestyle="solid",
-        color="black",
-        label="LLF",
-    )
-    plt.xlim([0, 2 * data1.z0])
-    plt.ylabel(r"$\Delta \rho$")
-    plt.xlabel("z")
-    plt.legend(frameon=False)
-    plt.tick_params(direction="in", length=2, width=0.5)
-    plotname = path + "/densityvar_comp.png"
-    plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
-    plt.show()
+#     plt.plot(
+#         z_arr,
+#         data1.ddensity[0, 0, :],
+#         linewidth=0.4,
+#         linestyle="solid",
+#         color=c4,
+#         alpha=0.5,
+#         label="Field A MHS",
+#     )
+#     plt.plot(
+#         z_arr,
+#         data2.ddensity[0, 0, :],
+#         linewidth=0.4,
+#         linestyle="solid",
+#         color=c2,
+#         alpha=0.5,
+#         label="Field B MHS",
+#     )
+#     for ix in range(1, data1.nx, 10):
+#         for iy in range(1, data1.ny, 10):
+#             plt.plot(
+#                 z_arr,
+#                 data1.ddensity[iy, ix, :],
+#                 linewidth=0.4,
+#                 linestyle="solid",
+#                 color=c4,
+#                 alpha=0.5,
+#             )
+#             plt.plot(
+#                 z_arr,
+#                 data2.ddensity[iy, ix, :],
+#                 linewidth=0.4,
+#                 linestyle="solid",
+#                 color=c2,
+#                 alpha=0.5,
+#             )
+#     plt.plot(
+#         z_arr,
+#         np.zeros_like(z_arr),
+#         linewidth=0.4,
+#         linestyle="solid",
+#         color="black",
+#         label="LLF",
+#     )
+#     plt.xlim([0, 2 * data1.z0])
+#     plt.ylabel(r"$\Delta \rho$")
+#     plt.xlabel("z")
+#     plt.legend(frameon=False)
+#     plt.tick_params(direction="in", length=2, width=0.5)
+#     plotname = path + "/densityvar_comp.png"
+#     plt.savefig(plotname, dpi=600, bbox_inches="tight", pad_inches=0.1)
+#     plt.show()

@@ -13,8 +13,10 @@ def phi(
     deltaz: np.float64,
 ):
     """
-    Returns poloidal component of magnetic field vector according
-    to asymptotic approximatio of Neukirch and Wiegelmann (2019).
+    Returns solution of asymptotic approximated version of ODE (22)
+    in Neukirch and Wiegelmann (2019) which defines the poloidal component
+    of the magnetic field vector, in the case C-, C+ > 0 (for definitions
+    see L Nadol PhD thesis).
     """
 
     rplus = p / deltaz
@@ -43,8 +45,10 @@ def phi_complex(
     deltaz: np.float64,
 ):
     """
-    Returns poloidal component of magnetic field vector according
-    to asymptotic approximatio of Neukirch and Wiegelmann (2019).
+    Returns solution of asymptotic approximated version of ODE (22)
+    in Neukirch and Wiegelmann (2019) which defines the poloidal component
+    of the magnetic field vector, in the case C-<0 or 1-2a<0 and k^2<k_critical
+    (for definitions see L Nadol PhD thesis).
     """
 
     rplus = v / deltaz
@@ -73,8 +77,10 @@ def dphidz(
     deltaz: np.float64,
 ) -> np.ndarray[np.float64, np.dtype[np.float64]]:
     """
-    Returns z derivatie of poloidal component of magnetic field vector according
-    to asymptotic approximation of Neukirch and Wiegelmann (2019).
+    Returns z-derivative of solution of asymptotic approximated version of ODE (22)
+    in Neukirch and Wiegelmann (2019) which defines the poloidal component
+    of the magnetic field vector, in the case C-, C+ > 0 (for definitions
+    see L Nadol PhD thesis).
     """
 
     rplus = p / deltaz
@@ -109,8 +115,10 @@ def dphidz_complex(
     deltaz: np.float64,
 ):
     """
-    Returns poloidal component of magnetic field vector according
-    to asymptotic approximatio of Neukirch and Wiegelmann (2019).
+    Returns z-derivative of solution of asymptotic approximated version of ODE (22)
+    in Neukirch and Wiegelmann (2019) which defines the poloidal component
+    of the magnetic field vector, in the case C-<0 or 1-2a<0 and k^2<k_critical
+    (for definitions see L Nadol PhD thesis).
     """
 
     rplus = v / deltaz
@@ -142,8 +150,9 @@ def phi_low(
     z: np.float64, p: np.float64, q: np.float64, kappa: np.float64
 ) -> np.float64:
     """
-    Returns poloidal component of magnetic field vector using
-    height profile by Low (1991, 1992).
+    Returns solution of ODE (18) in Neukirch and Wiegelmann (2019)
+    using the exponential switch function f(z) = a exp(-kappa z)
+    introduced in Low (1991).
     """
 
     return jv(p, q * np.exp(-z * kappa / 2.0)) / jv(p, q)
@@ -154,8 +163,9 @@ def dphidz_low(
     z: np.float64, p: np.float64, q: np.float64, kappa: np.float64
 ) -> np.float64:
     """
-    Returns z derivative of poloidal component of magnetic field vector using
-    height profile by Low (1991, 1992).
+    Returns z-derivative of solution of ODE (18) in Neukirch and Wiegelmann (2019)
+    using the exponential switch function f(z) = a exp(-kappa z)
+    introduced in Low (1991).
     """
 
     return (
@@ -176,6 +186,11 @@ def phi_hypgeo(
     z0: np.float64,
     deltaz: np.float64,
 ):
+    """
+    Returns solution of ODE (22) in Neukirch and Wiegelmann (2019)
+    which defines the poloidal component of the magnetic field vector,
+    in the case C1, C2 > 0 (for definitions see N+W (2019)).
+    """
 
     w = (z - z0) / deltaz
     eta_d = 1.0 / (1.0 + np.exp(2.0 * w))
@@ -237,6 +252,11 @@ def dphidz_hypgeo(
     z0: np.float64,
     deltaz: np.float64,
 ):
+    """
+    Returns z-derivative of solution of ODE (22) in Neukirch and Wiegelmann (2019)
+    which defines the poloidal component of the magnetic field vector,
+    in the case C1, C2 > 0 (for definitions see N+W (2019)).
+    """
     w = (z - z0) / deltaz
     eta_d = 1.0 / (1.0 + np.exp(2.0 * w))
 

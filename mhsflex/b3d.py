@@ -10,9 +10,8 @@ def mirror(
     field: np.ndarray,
 ) -> np.ndarray:
     """
-    Given the photospheric magnetic field data_bz,
-    returns Seehafer-mirrored Bz field vector.
-    Four times the size of original photospheric Bz vector.
+    Given the photospheric z-component of the magnetic field returns Seehafer-mirrored
+    field vector four times the size of original vector.
     """
 
     nx = field.shape[1]
@@ -35,8 +34,9 @@ def fftcoeff(
     nf_max: np.int32,
 ) -> np.ndarray:
     """
-    Given the Seehafer-mirrored photospheric magnetic field data_bz,
-    returns coefficients anm for series expansion of 3D magnetic field.
+    Given the Seehafer-mirrored photospheric z-component of the magnetic field returns
+    coefficients anm for series expansion of the 3D magnetic field (for definition of anm
+    see PhD thesis of L Nadol).
     """
 
     anm = np.zeros((nf_max, nf_max))
@@ -89,6 +89,15 @@ def get_phi_dphi(
     asymptotic=True,
     tanh=True,
 ):
+    """
+    Returns two arrays of size (nf, nf, nz,) of the values of the functions Phi and
+    its z-derivative for either Low, N+W or N+W-A, depending on the values of
+    asymptotic and tanh: (True, True) = N+W-A, (False, True) = N+W, (False, False) = Low,
+    (True, False) does not exist.
+    """
+    # if asymptotic and not tanh:
+    #     return ValueError("Cannot choose asymptotic as True and tanh as False.")
+
     phi_arr = np.zeros((nf_max, nf_max, nresol_z))
     dphidz_arr = np.zeros((nf_max, nf_max, nresol_z))
 
@@ -141,7 +150,12 @@ def b3d(
     asymptotic=True,
     tanh=True,
 ) -> Tuple:
-    # Calculate 3d magnetic field data using N+N(2024)]
+    """
+    Calculate 3D magnetic field from Field2dData and given paramters a, b, alpha, z0 and delta z
+    (for definitions see PhD thesis L Nadol). Extrapolation based on either Low, N+W or N+W-A
+    solution depending on the values of asymptotic and tanh: (True, True) = N+W-A,
+    (False, True) = N+W, (False, False) = Low, (True, False) does not exist.
+    """
 
     xmin, xmax, ymin, ymax, zmin, zmax = (
         field.x[0],
