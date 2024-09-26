@@ -47,6 +47,15 @@ class Field2dData:
         (can be adjusted by hand). Most SolarOrbiter images need to be cut for extraplation of a
         certain active region. No straightforward method to automate this process through user input
         has been found yet, therefore size of the magnetogram needs to be adjusted by hand by the user.
+
+        Steps:
+        (1)     From the file given at path read in the image and header data refarding the distance to
+                the sun, pixel unit and pixel size in arcsec.
+        (2)     Cut image to specific size [sty:lsty, stx:lstx] around feature under investigation.
+        (3)     Determine nx, ny, nf, px, py, xmax, ymax from data.
+        (4)     Choose nz, pz and zmax.
+        (5)     Determine x, y, z.
+        (6)     Write all into Field2dData object.
         """
 
         with astroopen(path) as data:
@@ -105,6 +114,15 @@ class Field2dData:
         (can be adjusted by hand). Most HMI images need to be cut for extraplation of a certain active
         region. No straightforward method to automate this process through user input has been found yet,
         therefore size of the magnetogram needs to be adjusted by hand by the user.
+
+        Steps:
+        (1)     From the file given at path read in the image and header data refarding the distance to
+                the sun, pixel unit and pixel size in arcsec.
+        (2)     Cut image to specific size [sty:lsty, stx:lstx] around feature under investigation.
+        (3)     Determine nx, ny, nf, px, py, xmax, ymax from data.
+        (4)     Choose nz, pz and zmax.
+        (5)     Determine x, y, z.
+        (6)     Write all into Field2dData object.
         """
 
         hmi_image = sunpy.map.Map(path).rotate()

@@ -7,8 +7,8 @@ from numba import njit
 @njit
 def phi(
     z: np.float64,
-    p: np.ndarray[np.float64, np.dtype[np.float64]],
-    q: np.ndarray[np.float64, np.dtype[np.float64]],
+    p: np.ndarray,
+    q: np.ndarray,
     z0: np.float64,
     deltaz: np.float64,
 ):
@@ -17,6 +17,10 @@ def phi(
     in Neukirch and Wiegelmann (2019) which defines the poloidal component
     of the magnetic field vector, in the case C-, C+ > 0 (for definitions
     see L Nadol PhD thesis).
+
+    Vectorisation possible for p and q, which have to be passed as arrays of the
+    same size. Vectorisation for z not possible due to differentiation between
+    z < z0 and z > z0. Returns array of size p.shape = q.shape which is (nf, nf,).
     """
 
     rplus = p / deltaz
@@ -39,8 +43,8 @@ def phi(
 @njit
 def phi_complex(
     z: np.float64,
-    v: np.ndarray[np.float64, np.dtype[np.float64]],
-    q: np.ndarray[np.float64, np.dtype[np.float64]],
+    v: np.ndarray,
+    q: np.ndarray,
     z0: np.float64,
     deltaz: np.float64,
 ):
@@ -49,6 +53,10 @@ def phi_complex(
     in Neukirch and Wiegelmann (2019) which defines the poloidal component
     of the magnetic field vector, in the case C-<0 or 1-2a<0 and k^2<k_critical
     (for definitions see L Nadol PhD thesis).
+
+    Vectorisation possible for p and q, which have to be passed as arrays of the
+    same size. Vectorisation for z not possible due to differentiation between
+    z < z0 and z > z0. Returns array of size p.shape = q.shape which is (nf, nf,).
     """
 
     rplus = v / deltaz
@@ -71,8 +79,8 @@ def phi_complex(
 @njit
 def dphidz(
     z: np.float64,
-    p: np.ndarray[np.float64, np.dtype[np.float64]],
-    q: np.ndarray[np.float64, np.dtype[np.float64]],
+    p: np.ndarray,
+    q: np.ndarray,
     z0: np.float64,
     deltaz: np.float64,
 ) -> np.ndarray[np.float64, np.dtype[np.float64]]:
@@ -81,6 +89,10 @@ def dphidz(
     in Neukirch and Wiegelmann (2019) which defines the poloidal component
     of the magnetic field vector, in the case C-, C+ > 0 (for definitions
     see L Nadol PhD thesis).
+
+    Vectorisation possible for p and q, which have to be passed as arrays of the
+    same size. Vectorisation for z not possible due to differentiation between
+    z < z0 and z > z0. Returns array of size (nf, nf, nz,) whereas p.shape = q.shape = (nf, nf,).
     """
 
     rplus = p / deltaz
@@ -109,8 +121,8 @@ def dphidz(
 @njit
 def dphidz_complex(
     z: np.float64,
-    v: np.ndarray[np.float64, np.dtype[np.float64]],
-    q: np.ndarray[np.float64, np.dtype[np.float64]],
+    v: np.ndarray,
+    q: np.ndarray,
     z0: np.float64,
     deltaz: np.float64,
 ):
@@ -119,6 +131,10 @@ def dphidz_complex(
     in Neukirch and Wiegelmann (2019) which defines the poloidal component
     of the magnetic field vector, in the case C-<0 or 1-2a<0 and k^2<k_critical
     (for definitions see L Nadol PhD thesis).
+
+    Vectorisation possible for v and q, which have to be passed as arrays of the
+    same size. Vectorisation for z not possible due to differentiation between
+    z < z0 and z > z0. Returns array of size (nf, nf, nz,) whereas v.shape = q.shape = (nf, nf,).
     """
 
     rplus = v / deltaz
@@ -153,6 +169,10 @@ def phi_low(
     Returns solution of ODE (18) in Neukirch and Wiegelmann (2019)
     using the exponential switch function f(z) = a exp(-kappa z)
     introduced in Low (1991).
+
+    Vectorisation should be possible for z, p and q, of which p and q have to be
+    passed as arrays of the same size. Returns array of size (nf, nf, nz,) whereas
+    p.shape = q.shape = (nf, nf,).
     """
 
     return jv(p, q * np.exp(-z * kappa / 2.0)) / jv(p, q)
@@ -166,6 +186,10 @@ def dphidz_low(
     Returns z-derivative of solution of ODE (18) in Neukirch and Wiegelmann (2019)
     using the exponential switch function f(z) = a exp(-kappa z)
     introduced in Low (1991).
+
+    Vectorisation should be possible for z, p and q, of which p and q have to be
+    passed as arrays of the same size. Returns array of size (nf, nf, nz,) whereas
+    p.shape = q.shape = (nf, nf,).
     """
 
     return (
@@ -190,6 +214,10 @@ def phi_hypgeo(
     Returns solution of ODE (22) in Neukirch and Wiegelmann (2019)
     which defines the poloidal component of the magnetic field vector,
     in the case C1, C2 > 0 (for definitions see N+W (2019)).
+
+    Vectorisation possible for p and q, which have to be passed as arrays of the
+    same size. Vectorisation for z not possible due to differentiation between
+    z < z0 and z > z0. Returns array of size p.shape = q.shape which is (nf, nf,).
     """
 
     w = (z - z0) / deltaz
@@ -256,6 +284,10 @@ def dphidz_hypgeo(
     Returns z-derivative of solution of ODE (22) in Neukirch and Wiegelmann (2019)
     which defines the poloidal component of the magnetic field vector,
     in the case C1, C2 > 0 (for definitions see N+W (2019)).
+
+    Vectorisation possible for p and q, which have to be passed as arrays of the
+    same size. Vectorisation for z not possible due to differentiation between
+    z < z0 and z > z0. Returns array of size p.shape = q.shape which is (nf, nf,).
     """
     w = (z - z0) / deltaz
     eta_d = 1.0 / (1.0 + np.exp(2.0 * w))

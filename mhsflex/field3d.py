@@ -80,6 +80,10 @@ class Field3dData:
     tanh: bool
 
     def save(self, path):
+        """
+        Save Field3dData object as pickle file.
+        """
+
         for name, attribute in self.__dict__.items():
             name = ".".join((name, "pkl"))
             with open("/".join((path, name)), "wb") as f:
@@ -87,6 +91,10 @@ class Field3dData:
 
     @classmethod
     def load(cls, path):
+        """
+        Load Field3dData object from pickle file.
+        """
+
         my_model = {}
         for name in cls.__annotations__:
             file_name = ".".join((name, "pkl"))
@@ -97,7 +105,11 @@ class Field3dData:
     @cached_property
     def btemp(self) -> np.ndarray:
         """
-        Calculate background temperature according to hyperbolic tangent height profile.
+        Returns background temperature in Kelvin by height following a hyperbolic tangent height
+        profile. From given photospheric and coronal temperatures T0 (temp at z0) and T1 are
+        calculated as coefficients for the hyperbolic tangent temperature profile. Current values:
+        T_PHOTOSPHERE = 5600.0 Kelvin
+        T_CORONA = 2.0 * 10.0**6 Kelvin
         """
 
         T0 = (T_PHOTOSPHERE + T_CORONA * np.tanh(self.z0 / self.deltaz)) / (
@@ -110,7 +122,10 @@ class Field3dData:
     @cached_property
     def bpressure(self) -> np.ndarray:
         """
-        Calculate background pressure according to hyperbolic tangent height profile.
+        Returns background pressure resulting from background temperature btemp.
+        Gives background pressure height profile normalised to 1 on the photosphere.
+        Need to multiply by BETA0 / 2.0 to normalise to same scale as dpressure. Need to
+        then multiply additionally by (B0 * 10**-4) ** 2.0 / MU0 to get into kg/(s^2m).
         """
 
         T0 = (T_PHOTOSPHERE + T_CORONA * np.tanh(self.z0 / self.deltaz)) / (
@@ -143,7 +158,10 @@ class Field3dData:
     @cached_property
     def bdensity(self) -> np.ndarray:
         """
-        Calculate background density according to hyperbolic tangent height profile.
+        Returns background density resulting from background temperature btemp. Gives background
+        density height profile normalised to 1 on the photosphere. Need to multiply by
+        BETA0 / (2.0 * H) * T0 / T_PHOTOSPHERE to normalise to same scale as ddensity. Need to then
+        multiply additionally by (B0 * 10**-4) ** 2.0 / (MU0 * G_SOLAR * L) to get into kg/(m^3).
         """
 
         T0 = (T_PHOTOSPHERE + T_CORONA * np.tanh(self.z0 / self.deltaz)) / (
@@ -163,6 +181,7 @@ class Field3dData:
     def dpressure(self) -> np.ndarray:
         """
         Calculate variation in pressure described by equation (30) in Neukirch and Wiegelmann (2019).
+        Normalised to same scale as BETA0 / 2.0 * bpressure (see L Nadol PhD thesis for details).
         """
 
         bz_matrix = self.field[
@@ -189,6 +208,8 @@ class Field3dData:
     def ddensity(self) -> np.ndarray:
         """
         Calculate variation in pressure described by equation (31) in Neukirch and Wiegelmann (2019).
+        Normalised to same scale as BETA0 / (2.0 * H) * T0 / T_PHOTOSPHERE * bdensity (see L Nadol
+        PhD thesis for details).
         """
 
         bz_matrix = self.field[
@@ -231,7 +252,8 @@ class Field3dData:
     @cached_property
     def fpressure(self) -> np.ndarray:
         """
-        Calculate full pressure described by equation (14) in Neukirch and Wiegelmann (2019).
+        Returns full pressure described by equation (14) in Neukirch and Wiegelmann (2019) in
+        normalised scale. Multiply by (B0 * 10**-4) ** 2.0 / MU0 to get into kg/(s^2m).
         """
 
         bp_matrix = np.zeros_like(self.dpressure)
@@ -250,7 +272,9 @@ class Field3dData:
     @cached_property
     def fdensity(self) -> np.ndarray:
         """
-        Calculate full density described by equation (15) in Neukirch and Wiegelmann (2019).
+        Returns full density described by equation (15) in Neukirch and Wiegelmann (2019) in
+        normalised scale. Multiply by (B0 * 10**-4) ** 2.0 / (MU0 * G_SOLAR * L) to get
+        into kg/(m^3).
         """
 
         T0 = (T_PHOTOSPHERE + T_CORONA * np.tanh(self.z0 / self.deltaz)) / (
@@ -273,20 +297,20 @@ class Field3dData:
         )  #  *(B0 * 10**-4) ** 2.0 / (MU0 * G_SOLAR * L)
 
     @cached_property
-    def lf3D(self) -> np.ndarray:
-        """
-        Calculate Lorentz force at all grid points.
-        """
-
-        return lf3d(self)
-
-    @cached_property
     def j3D(self) -> np.ndarray:
         """
-        Calculate current density at all grid points.
+        Calculate current density at all grid points. For details see function j3d below.
         """
 
         return j3d(self)
+
+    @cached_property
+    def lf3D(self) -> np.ndarray:
+        """
+        Calculate Lorentz force at all grid points. For details see function lf3d below.
+        """
+
+        return lf3d(self)
 
 
 def calculate_magfield(
@@ -300,7 +324,7 @@ def calculate_magfield(
     tanh=True,
 ) -> Field3dData:
     """
-    Create Field3dData object from Field2dData object and choosen paramters.
+    Create Field3dData object from Field2dData object and choosen paramters using mhsflex.b3d.b3d.
     """
 
     mf3d, dbz3d = b3d(field2d, a, b, alpha, z0, deltaz, asymptotic, tanh)
@@ -331,8 +355,9 @@ def btemp_linear(
     field3d: Field3dData, heights: np.ndarray, temps: np.ndarray
 ) -> np.ndarray:
     """
-    Calculate background temperature using linear interpolation between given temperatures temps
-    at given heights heights.
+    Return background temperature by height in Kelvin using linear interpolation between
+    given temperatures (temps) at given heights (heights). temps and heights must be arrays
+    of the same length.
     """
 
     temp = np.zeros_like(field3d.z)
@@ -359,7 +384,10 @@ def bpressure_linear(
     field3d: Field3dData, heights: np.ndarray, temps: np.ndarray
 ) -> np.ndarray:
     """
-    Calculate background pressure resulting from linear interpolated temperature btemp_linear.
+    Returns background pressure resulting from background temperature btemp_linear.
+    Gives background pressure height profile normalised to 1 on the photosphere.
+    Need to multiply by BETA0 / 2.0 to normalise to same scale as dpressure. Need to
+    then multiply additionally by (B0 * 10**-4) ** 2.0 / MU0 to get into kg/(s^2m).
     """
 
     temp = np.zeros_like(field3d.z)
@@ -403,7 +431,10 @@ def bdensity_linear(
     field3d: Field3dData, heights: np.ndarray, temps: np.ndarray
 ) -> np.ndarray:
     """
-    Calculate background density resulting from linear interpolated temperature btemp_linear.
+    Returns background density resulting from background temperature btemp_linear. Gives background
+    density height profile normalised to 1 on the photosphere. Need to multiply by
+    BETA0 / (2.0 * H) * T0 / T_PHOTOSPHERE to normalise to same scale as ddensity. Need to then
+    multiply additionally by (B0 * 10**-4) ** 2.0 / (MU0 * G_SOLAR * L) to get into kg/(m^3).
     """
 
     temp0 = temps[0]
@@ -417,7 +448,9 @@ def fpressure_linear(
     field3d: Field3dData, heights: np.ndarray, temps: np.ndarray
 ) -> np.ndarray:
     """
-    Calculate full pressure resulting from linear interpolated temperature btemp_linear.
+    Returns full pressure in kg/(s^2m) described by equation (14) in Neukirch and Wiegelmann (2019)
+    from linear interpolated background temperature. Multiply by (B0 * 10**-4) ** 2.0 / MU0 to get
+    in normalised scale as dpressure.
     """
 
     bp_matrix = np.zeros_like(field3d.dpressure)
@@ -436,7 +469,9 @@ def fdensity_linear(
     field3d: Field3dData, heights: np.ndarray, temps: np.ndarray
 ) -> np.ndarray:
     """
-    Calculate full density resulting from linear interpolated temperature btemp_linear.
+    Returns full density in kg/(m^3) described by equation (15) in Neukirch and Wiegelmann (2019)
+    resulting from linearly interpolated background temperature. Divide by
+    (B0 * 10**-4) ** 2.0 / (MU0 * G_SOLAR * L) to get in normalised scale as ddensity.
     """
 
     for iheight, height in enumerate(heights):
@@ -453,16 +488,14 @@ def fdensity_linear(
     bd_matrix = np.zeros_like(field3d.ddensity)
     bd_matrix[:, :, :] = bdensity_linear(field3d, heights, temps)
 
-    return (
-        (BETA0 / (2.0 * H) * T0 / T_PHOTOSPHERE * bd_matrix + field3d.ddensity)
-        * (B0 * 10**-4) ** 2.0
-        / (MU0 * G_SOLAR * L)
-    )
+    return BETA0 / (2.0 * H) * T0 / T_PHOTOSPHERE * bd_matrix + field3d.ddensity * (
+        B0 * 10**-4
+    ) ** 2.0 / (MU0 * G_SOLAR * L)
 
 
 def j3d(field3d: Field3dData) -> np.ndarray:
     """
-    Return current density, calucated from magnetic field as j = (alpha B + curl(0,0,f(z)Bz))/ mu0.
+    Returns current density, calucated from magnetic field as j = (alpha B + curl(0,0,f(z)Bz))/ mu0.
     """
 
     j = np.zeros_like(field3d.field)
@@ -486,7 +519,7 @@ def j3d(field3d: Field3dData) -> np.ndarray:
 
 def lf3d(field3d: Field3dData) -> np.ndarray:
     """
-    Calculate Lorentz force.
+    Returns Lorentz force calculated from j x B.
     """
 
     j = j3d(field3d)

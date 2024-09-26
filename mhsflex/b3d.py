@@ -10,8 +10,13 @@ def mirror(
     field: np.ndarray,
 ) -> np.ndarray:
     """
-    Given the photospheric z-component of the magnetic field returns Seehafer-mirrored
-    field vector four times the size of original vector.
+    Given the photospheric z-component of the magnetic field (field) returns Seehafer-mirrored
+    field vector four times the size of original vector. Creates odd Seehafer-extension
+    according to
+        Bz(-x, y, 0) = -Bz(x,y, 0)
+        Bz(x, -y, 0) = -Bz(x,y, 0)
+        Bz(-x, -y, 0) = Bz(x,y, 0)
+    Returns array of size (2ny, 2nx,)
     """
 
     nx = field.shape[1]
@@ -34,9 +39,14 @@ def fftcoeff(
     nf_max: np.int32,
 ) -> np.ndarray:
     """
-    Given the Seehafer-mirrored photospheric z-component of the magnetic field returns
+    Given the Seehafer-mirrored photospheric z-component of the magnetic field (data_bz) returns
     coefficients anm for series expansion of the 3D magnetic field (for definition of anm
-    see PhD thesis of L Nadol).
+    see PhD thesis of L Nadol) using nf_max-many Fourier modes in each direction.
+
+    Calculates FFT coefficients using np.fft and shifts zeroth frequency into the centre of the
+    array (exact position dependent on if nx and ny are even or odd). Then the coefficients anm
+    are calcualted from a combination of real parts of FFT coefficients according to L Nadol PhD
+    thesis. Returns array of size (nf, nf,).
     """
 
     anm = np.zeros((nf_max, nf_max))
@@ -155,6 +165,9 @@ def b3d(
     (for definitions see PhD thesis L Nadol). Extrapolation based on either Low, N+W or N+W-A
     solution depending on the values of asymptotic and tanh: (True, True) = N+W-A,
     (False, True) = N+W, (False, False) = Low, (True, False) does not exist.
+
+    Returns a tuple of two arrays of size (ny, nx, nz, 3,), of which the first one contains By, Bx
+    and Bz and the second one contains partial derivatives of Bz (dBzdy, dBzdx and dBzdz).
     """
 
     xmin, xmax, ymin, ymax, zmin, zmax = (
