@@ -522,7 +522,7 @@ def lf3d(field3d: Field3dData) -> np.ndarray:
     Returns Lorentz force calculated from j x B.
     """
 
-    j = j3d(field3d)
+    j = field3d.j3D
 
     lf = np.zeros_like(field3d.field)
 
