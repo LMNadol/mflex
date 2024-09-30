@@ -488,9 +488,11 @@ def fdensity_linear(
     bd_matrix = np.zeros_like(field3d.ddensity)
     bd_matrix[:, :, :] = bdensity_linear(field3d, heights, temps)
 
-    return BETA0 / (2.0 * H) * T0 / T_PHOTOSPHERE * bd_matrix + field3d.ddensity * (
-        B0 * 10**-4
-    ) ** 2.0 / (MU0 * G_SOLAR * L)
+    return (
+        (BETA0 / (2.0 * H) * T0 / T_PHOTOSPHERE * bd_matrix + field3d.ddensity)
+        * (B0 * 10**-4) ** 2.0
+        / (MU0 * G_SOLAR * L)
+    )
 
 
 def j3d(field3d: Field3dData) -> np.ndarray:

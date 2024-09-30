@@ -428,8 +428,8 @@ def plot_fieldlines_footpoints(
     boxedges[0, 2] = zmin
     boxedges[1, 2] = zmax  # 2 * data.z0  # FOR ZOOM
 
-    for ix in range(0, data.nx, int(data.nx / 20)):
-        for iy in range(0, data.ny, int(data.ny / 20)):
+    for ix in range(0, data.nx, int(data.nx / 40)):
+        for iy in range(0, data.ny, int(data.ny / 40)):
             if sources[iy, ix] != 0 or sinks[iy, ix] != 0:
 
                 x_start = ix / (data.nx / xmax)

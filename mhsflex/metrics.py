@@ -49,6 +49,24 @@ def CauSchw(B: np.ndarray, b: np.ndarray) -> np.float64:
     return np.sum(np.divide(num, div)) / (B.shape[0] * B.shape[1] * B.shape[2])
 
 
+def CauSchw_z(B: np.ndarray, b: np.ndarray) -> np.float64:
+    """
+    Returns Cauchy Schwarz metric of B : B_ref and b : B_rec.
+    """
+
+    if B.shape != b.shape:
+        raise ValueError("Field sizes do not match.")
+
+    div = np.multiply(
+        np.sqrt(B[:, :, 0] ** 2 + B[:, :, 1] ** 2 + B[:, :, 2] ** 2),
+        np.sqrt(b[:, :, 0] ** 2 + b[:, :, 1] ** 2 + b[:, :, 2] ** 2),
+    )
+
+    num = B[:, :, 0] * b[:, :, 0] + B[:, :, 1] * b[:, :, 1] + B[:, :, 2] * b[:, :, 2]
+
+    return np.sum(np.divide(num, div)) / (B.shape[0] * B.shape[1])
+
+
 def NormErr(B: np.ndarray, b: np.ndarray) -> np.float64:
     """
     Returns Normalised Vector Error metric of B : B_ref and b : B_rec.
@@ -76,6 +94,31 @@ def NormErr(B: np.ndarray, b: np.ndarray) -> np.float64:
     return np.divide(num, div)
 
 
+def NormErr_z(B: np.ndarray, b: np.ndarray) -> np.float64:
+    """
+    Returns Normalised Vector Error metric of B : B_ref and b : B_rec.
+    """
+
+    if B.shape != b.shape:
+        raise ValueError("Field sizes do not match.")
+
+    # return np.sum(np.sqrt(np.multiply(B - b, B - b))) / np.sum(
+    #     np.sqrt(np.multiply(B, B))
+    # )
+
+    diff = B - b
+
+    temp = np.sqrt(diff[:, :, 0] ** 2 + diff[:, :, 1] ** 2 + diff[:, :, 2] ** 2)
+
+    num = np.sum(temp)
+
+    temp2 = np.sqrt(B[:, :, 0] ** 2 + B[:, :, 1] ** 2 + B[:, :, 2] ** 2)
+
+    div = np.sum(temp2)
+
+    return np.divide(num, div)
+
+
 def MeanErr(B: np.ndarray, b: np.ndarray) -> np.float64:
     """
     Returns Mean Vector Error metric of B : B_ref and b : B_rec.
@@ -90,6 +133,22 @@ def MeanErr(B: np.ndarray, b: np.ndarray) -> np.float64:
     num = np.sqrt(temp[:, :, :, 0] ** 2 + temp[:, :, :, 1] ** 2 + temp[:, :, :, 2] ** 2)
 
     return np.sum(np.divide(num, div)) / (B.shape[0] * B.shape[1] * B.shape[2])
+
+
+def MeanErr_z(B: np.ndarray, b: np.ndarray) -> np.float64:
+    """
+    Returns Mean Vector Error metric of B : B_ref and b : B_rec.
+    """
+
+    if B.shape != b.shape:
+        raise ValueError("Field sizes do not match.")
+
+    div = np.sqrt(B[:, :, 0] ** 2 + B[:, :, 1] ** 2 + B[:, :, 2] ** 2)
+
+    temp = B - b
+    num = np.sqrt(temp[:, :, 0] ** 2 + temp[:, :, 1] ** 2 + temp[:, :, 2] ** 2)
+
+    return np.sum(np.divide(num, div)) / (B.shape[0] * B.shape[1])
 
 
 def MagEnergy(B: np.ndarray, b: np.ndarray) -> np.float64:
@@ -733,6 +792,61 @@ def pearson_corr_coeff_issi(
             den_surface_rec[iy, ix] = np.trapz(
                 fdensity_linear(datab, heights, temps)[iy, ix, :], z_arr
             )
+
+    print(
+        "Pearson Correlation reference value for pressure ",
+        pearsonr(pres_surface_ref.flatten(), pres_surface_ref.flatten()),
+    )
+    print(
+        "Pearson Correlation reference value for density ",
+        pearsonr(den_surface_ref.flatten(), den_surface_ref.flatten()),
+    )
+    print(
+        "Pearson Correlation actual value for pressure ",
+        pearsonr(pres_surface_rec.flatten(), pres_surface_ref.flatten()),
+    )
+    print(
+        "Pearson Correlation actual value for density ",
+        pearsonr(den_surface_rec.flatten(), den_surface_ref.flatten()),
+    )
+
+
+def pearson_corr_coeff_issi_2(
+    fpres_3d_ref: np.ndarray,
+    fden_3d_ref: np.ndarray,
+    datab: Field3dData,
+    fpres_3d_rec: np.ndarray,
+    fden_3d_rec: np.ndarray,
+    heights: np.ndarray,
+    temps: np.ndarray,
+) -> None:
+    """
+    B : B_ref and b : B_rec.
+    Returns line-of-sigth integration (using composite trapezoidal rule) with respect to
+    the z-direction for pressure and density for two given magnetic field models
+    (reference model and reconstructed model) in the order:
+        (1) Pressure surface data for reference field
+        (2) Density surface data for reference field
+        (3) Pressure surface data for reconstructed field
+        (4) Density surface data for reconstructed field
+    Also, prints the Pearson Correlation Coefficient (reference and actual) for the line-of-sight integration
+    for both pressure and density between the reference and the recreated model.
+    """
+
+    zmin, zmax = datab.z[0], datab.z[-1]
+    z_arr = np.arange(datab.nz) * (zmax - zmin) / (datab.nz - 1) + zmin
+
+    pres_surface_ref = np.zeros((datab.ny, datab.nx))
+    den_surface_ref = np.zeros((datab.ny, datab.nx))
+    pres_surface_rec = np.zeros((datab.ny, datab.nx))
+    den_surface_rec = np.zeros((datab.ny, datab.nx))
+
+    for ix in range(datab.nx):
+        for iy in range(datab.ny):
+            pres_surface_ref[iy, ix] = np.trapz(fpres_3d_ref[iy, ix, :], z_arr)
+            den_surface_ref[iy, ix] = np.trapz(fden_3d_ref[iy, ix, :], z_arr)
+            pres_surface_rec[iy, ix] = np.trapz(fpres_3d_rec[iy, ix, :], z_arr)
+            den_surface_rec[iy, ix] = np.trapz(fden_3d_rec[iy, ix, :], z_arr)
 
     print(
         "Pearson Correlation reference value for pressure ",
