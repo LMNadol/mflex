@@ -23,6 +23,6 @@ run1
 run
 pro/compare/
 thesis
-*.py
+#*.py
 
 src/old

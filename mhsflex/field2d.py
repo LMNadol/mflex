@@ -149,6 +149,8 @@ class Field2dData:
         px_arcsec = hdr["CDELT1"]
         py_arcsec = hdr["CDELT2"]
 
+        print(px_unit, py_unit, px_arcsec, py_arcsec)
+
         nx = image.data.shape[1]
         ny = image.data.shape[0]
 
@@ -157,9 +159,16 @@ class Field2dData:
         px_radians = px_arcsec / 206265.0
         py_radians = py_arcsec / 206265.0
 
+        print(px_radians, py_radians)
+
+        print(dist)
+
         dist_Mm = dist * 10**-6
         px = px_radians * dist_Mm
         py = py_radians * dist_Mm
+
+        print(dist_Mm)
+        print(px, py)
 
         xmin = 0.0
         ymin = 0.0
