@@ -310,8 +310,8 @@ def show_footpoints(data: Field3dData) -> None:
     plt.tick_params(direction="in", length=2, width=0.5)
     ax.set_box_aspect(ymax / xmax)
 
-    for ix in range(0, data.nx, int(data.nx / 40)):
-        for iy in range(0, data.ny, int(data.ny / 40)):
+    for ix in range(0, data.nx, int(data.nx / 20)):
+        for iy in range(0, data.ny, int(data.ny / 20)):
             if sources[iy, ix] != 0:
                 ax.scatter(
                     ix / (data.nx / xmax),
@@ -319,6 +319,7 @@ def show_footpoints(data: Field3dData) -> None:
                     color=c1,
                     s=0.5,
                 )
+
             if sinks[iy, ix] != 0:
                 ax.scatter(
                     ix / (data.nx / xmax),
@@ -428,13 +429,13 @@ def plot_fieldlines_footpoints(
     boxedges[0, 2] = zmin
     boxedges[1, 2] = zmax  # 2 * data.z0  # FOR ZOOM
 
-    for ix in range(0, data.nx, int(data.nx / 40)):
-        for iy in range(0, data.ny, int(data.ny / 40)):
+    for ix in range(0, data.nx, int(data.nx / 20)):
+        for iy in range(0, data.ny, int(data.ny / 20)):
             if sources[iy, ix] != 0 or sinks[iy, ix] != 0:
 
                 x_start = ix / (data.nx / xmax)
                 y_start = iy / (data.ny / ymax)
-
+                print(x_start, y_start)
                 if data.bz[int(y_start), int(x_start)] < 0.0:
                     h1 = -h1
 
@@ -464,10 +465,11 @@ def plot_fieldlines_footpoints(
                         fieldline[:, 1],
                         fieldline[:, 0],
                         fieldline[:, 2],
-                        color=c2,
+                        color=c1,
                         linewidth=0.5,
                         zorder=4000,
                     )
+
                 else:
                     ax.plot(
                         fieldline[:, 1],
