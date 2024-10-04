@@ -31,9 +31,17 @@ c2 = (0.420, 0.502, 1.000)
 c4 = (1.000, 0.224, 0.376)
 c5 = (1.000, 0.412, 0.816)
 norm = colors.SymLogNorm(50, vmin=-7.5e2, vmax=7.5e2)
-c2 = (0.992, 0.251, 0.733)
-# c2 = (0.784, 0.231, 0.576)
-# c2 = (0.867, 0.871, 0.184)
+c2 = (0.420, 0.502, 1.000)
+c3 = "black"
+c4 = (1.000, 0.224, 0.376)
+c5 = (0.784, 0.231, 0.576)
+c7 = (0.992, 0.251, 0.733)
+c8 = (0.867, 0.871, 0.184)
+c9 = (0.949, 0.922, 0.678)
+c10 = (0.984, 0.455, 0.231)
+c11 = (0.765, 0.835, 0.922)
+c12 = (0.965, 0.694, 0.486)
+c13 = (0.992, 0.584, 0.820)
 
 
 def plot(
@@ -75,8 +83,8 @@ def plot(
     if view == "los":
         ax.view_init(90, -90)  # type: ignore
 
-        ax.set_xlabel("x", labelpad=10)
-        ax.set_ylabel("y", labelpad=10)
+        ax.set_xlabel("x", labelpad=5)
+        ax.set_ylabel("y", labelpad=-0.1)
 
         ax.set_xticks(np.arange(0, xmax + 1.0 * 10**-8, xmax / 5))
         ax.set_yticks(np.arange(0, ymax + 1.0 * 10**-8, ymax / 5))
@@ -93,16 +101,16 @@ def plot(
     if view == "side":
         if not zoom:
             ax.view_init(0, -90)  # type: ignore
-            ax.set_xlabel("x", labelpad=5)
-            ax.set_zlabel("z", labelpad=10)  # type: ignore
+            ax.set_xlabel("x", labelpad=30)
+            ax.set_zlabel("z", labelpad=0.5)  # type: ignore
 
             ax.set_xticks(np.arange(0, xmax + 1.0 * 10**-8, xmax / 5))
-            ax.set_zticks(np.arange(0, zmax + 1.0 * 10**-8, zmax / 5))  # type: ignore
+            ax.set_zticks(np.arange(0, zmax + 1.0 * 10**-8, zmax / 4))  # type: ignore
 
             ax.set_yticklabels([])  # type: ignore
             ax.set_ylabel("")
 
-            [t.set_va("center") for t in ax.get_xticklabels()]  # type: ignore
+            [t.set_va("top") for t in ax.get_xticklabels()]  # type: ignore
             [t.set_ha("center") for t in ax.get_xticklabels()]  # type: ignore
 
             [t.set_va("center") for t in ax.get_zticklabels()]  # type: ignore
@@ -112,7 +120,7 @@ def plot(
             ax.set_xticks(np.arange(0, xmax + 1.0 * 10**-8, xmax / 5))
             ax.set_zticks(np.arange(0, 2 * data.z0 + 1.0 * 10**-8, zmax / 5))
             ax.set_xlabel("x", labelpad=50)
-            ax.set_zlabel("z", labelpad=-1)  # type: ignore
+            ax.set_zlabel("z", labelpad=10)  # type: ignore
             ax.set_yticklabels([])  # type: ignore
             ax.set_ylabel("")
 
@@ -370,7 +378,9 @@ def plot_magnetogram(data: Field3dData, ax) -> None:
     ax.set_zlim(zmin, zmax)  # type: ignore
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
-    ax.set_box_aspect((xmax, ymax, zmax))  # type : ignore # (xmax, ymax, 2 * data.z0)
+    ax.set_box_aspect(
+        (xmax, ymax, 2 * zmax)
+    )  # type : ignore # (xmax, ymax, 2 * data.z0)
 
     ax.xaxis._axinfo["tick"]["inward_factor"] = 0.2  # type : ignore
     ax.xaxis._axinfo["tick"]["outward_factor"] = 0  # type : ignore
@@ -430,7 +440,7 @@ def plot_fieldlines_footpoints(
     boxedges[1, 2] = zmax  # 2 * data.z0  # FOR ZOOM
 
     for ix in range(0, data.nx, int(data.nx / 40)):
-        for iy in range(0, data.ny, int(data.ny / 30)):
+        for iy in range(0, data.ny, int(data.ny / 40)):
             if sources[iy, ix] != 0 or sinks[iy, ix] != 0:
 
                 x_start = ix / (data.nx / xmax)
@@ -465,7 +475,7 @@ def plot_fieldlines_footpoints(
                         fieldline[:, 1],
                         fieldline[:, 0],
                         fieldline[:, 2],
-                        color=c2,
+                        color=c7,
                         linewidth=0.5,
                         zorder=4000,
                     )
@@ -475,7 +485,7 @@ def plot_fieldlines_footpoints(
                         fieldline[:, 1],
                         fieldline[:, 0],
                         fieldline[:, 2],
-                        color=c2,
+                        color=c7,
                         linewidth=0.5,
                         zorder=4000,
                     )
@@ -590,8 +600,8 @@ def plot_fieldlines_grid(data: Field3dData, ax) -> None:
 
     x_0 = 0.0000001
     y_0 = 0.0000001
-    dx = xmax / 18.0
-    dy = ymax / 18.0
+    dx = xmax / 40.0
+    dy = ymax / 25.0
 
     nlinesmaxx = math.floor(xmax / dx)
     nlinesmaxy = math.floor(ymax / dy)
@@ -647,7 +657,7 @@ def plot_fieldlines_grid(data: Field3dData, ax) -> None:
                     fieldline[:, 1],
                     fieldline[:, 0],
                     fieldline[:, 2],
-                    color=c2,
+                    color=c7,  # (0.576, 1.000, 0.271),
                     linewidth=0.5,
                     zorder=4000,
                 )
@@ -656,7 +666,7 @@ def plot_fieldlines_grid(data: Field3dData, ax) -> None:
                     fieldline[:, 1],
                     fieldline[:, 0],
                     fieldline[:, 2],
-                    color=c2,
+                    color=c2,  # (0.757, 0.329, 1.000),
                     linewidth=0.5,
                     zorder=4000,
                 )

@@ -542,3 +542,31 @@ def lf3d(field3d: Field3dData) -> np.ndarray:
     )
 
     return lf
+
+
+def mag_energy(field3d: Field3dData) -> float:
+    """
+    Calculate magnetic energy.
+    """
+
+    b_squared = np.zeros_like(field3d.field[:, :, :, 0])
+
+    b_squared[:, :, :] = (
+        field3d.field[:, :, :, 0] ** 2
+        + field3d.field[:, :, :, 1] ** 2
+        + field3d.field[:, :, :, 2] ** 2
+    )
+
+    z_int = np.zeros((field3d.ny, field3d.nx))
+    y_int = np.zeros((field3d.nx))
+
+    for ix in range(field3d.nx):
+
+        for iy in range(field3d.ny):
+            z_int[iy, ix] = np.trapz(b_squared[iy, ix, :], field3d.z)
+
+        y_int[ix] = np.trapz(z_int[:, ix], field3d.y)
+
+    x_int = np.trapz(y_int, field3d.x)
+
+    return x_int / (8.0 * np.pi)
