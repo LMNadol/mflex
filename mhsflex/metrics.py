@@ -768,8 +768,7 @@ def field_div_metric_issi2(
     Then the metric score can be obtained by the fraction of the initial footpoints in which these scores
     are less than 10%.
     """
-    
-  
+
     h1 = 1.0 / 100.0  # Initial step length for fieldline3D
     eps = 1.0e-8
     # Tolerance to which we require point on field line known for fieldline3D
