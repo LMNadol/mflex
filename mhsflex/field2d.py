@@ -88,6 +88,8 @@ class Field2dData:
         px = px_radians * dist_Mm
         py = py_radians * dist_Mm
 
+        print(px, py)
+
         xmin = 0.0
         ymin = 0.0
         zmin = 0.0

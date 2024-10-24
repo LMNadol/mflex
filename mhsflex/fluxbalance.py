@@ -527,7 +527,7 @@ def b3d_fb(
     k2 = np.outer(ky**2, ones) + np.outer(ones, kx**2)
     k2[0, 0] = (2.0 * np.pi / lxn) ** 2 + (2.0 * np.pi / lyn) ** 2
 
-    print(k2.min)
+    # print(k2.min)
 
     anm, bnm, cnm, dnm = np.divide(fftcoeff_fb(field.bz, nf), k2)
 
