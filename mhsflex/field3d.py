@@ -502,19 +502,19 @@ def j3d(field3d: Field3dData) -> np.ndarray:
 
     j = np.zeros_like(field3d.field)
 
-    j[:, :, :, 2] = field3d.alpha * field3d.field[:, :, :, 2] * 10**-4
+    j[:, :, :, 2] = field3d.alpha * L * field3d.field[:, :, :, 2] * 10**-4
 
     f_matrix = np.zeros_like(field3d.dfield[:, :, :, 0])
     f_matrix[:, :, :] = f(field3d.z, field3d.z0, field3d.deltaz, field3d.a, field3d.b)
 
-    j[:, :, :, 0] = (
-        field3d.alpha * field3d.field[:, :, :, 1] * 10**-4
+    j[:, :, :, 1] = (
+        field3d.alpha * L * field3d.field[:, :, :, 1] * 10**-4
         + f_matrix * field3d.dfield[:, :, :, 0] * 10**-4
     )
 
-    j[:, :, :, 1] = (
-        field3d.alpha * field3d.field[:, :, :, 0] * 10**-4
-        + f_matrix * field3d.dfield[:, :, :, 1] * 10**-4
+    j[:, :, :, 0] = (
+        field3d.alpha * L * field3d.field[:, :, :, 0] * 10**-4
+        - f_matrix * field3d.dfield[:, :, :, 1] * 10**-4
     )
     return j / MU0
 
@@ -529,16 +529,16 @@ def lf3d(field3d: Field3dData) -> np.ndarray:
     lf = np.zeros_like(field3d.field)
 
     lf[:, :, :, 0] = (
-        j[:, :, :, 1] * field3d.field[:, :, :, 2] * 10**-4
-        - j[:, :, :, 2] * field3d.field[:, :, :, 1] * 10**-4
+        j[:, :, :, 2] * field3d.field[:, :, :, 1] * 10**-4
+        - j[:, :, :, 1] * field3d.field[:, :, :, 2] * 10**-4
     )
     lf[:, :, :, 1] = (
-        j[:, :, :, 2] * field3d.field[:, :, :, 0] * 10**-4
-        - j[:, :, :, 0] * field3d.field[:, :, :, 2] * 10**-4
+        j[:, :, :, 0] * field3d.field[:, :, :, 2] * 10**-4
+        - j[:, :, :, 2] * field3d.field[:, :, :, 0] * 10**-4
     )
     lf[:, :, :, 2] = (
-        j[:, :, :, 0] * field3d.field[:, :, :, 1] * 10**-4
-        - j[:, :, :, 1] * field3d.field[:, :, :, 0] * 10**-4
+        j[:, :, :, 1] * field3d.field[:, :, :, 0] * 10**-4
+        - j[:, :, :, 0] * field3d.field[:, :, :, 1] * 10**-4
     )
 
     return lf
@@ -549,24 +549,30 @@ def mag_energy(field3d: Field3dData) -> float:
     Calculate magnetic energy.
     """
 
-    b_squared = np.zeros_like(field3d.field[:, :, :, 0])
+    # b_squared = np.zeros_like(field3d.field[:, :, :, 0])
 
-    b_squared[:, :, :] = (
-        field3d.field[:, :, :, 0] ** 2
-        + field3d.field[:, :, :, 1] ** 2
-        + field3d.field[:, :, :, 2] ** 2
-    )
+    # b_squared[:, :, :] = (
+    #     field3d.field[:, :, :, 0] ** 2
+    #     + field3d.field[:, :, :, 1] ** 2
+    #     + field3d.field[:, :, :, 2] ** 2
+    # )
 
-    z_int = np.zeros((field3d.ny, field3d.nx))
-    y_int = np.zeros((field3d.nx))
+    # z_int = np.zeros((field3d.ny, field3d.nx))
+    # y_int = np.zeros((field3d.nx))
 
-    for ix in range(field3d.nx):
+    # for ix in range(field3d.nx):
 
-        for iy in range(field3d.ny):
-            z_int[iy, ix] = np.trapz(b_squared[iy, ix, :], field3d.z)
+    #     for iy in range(field3d.ny):
+    #         z_int[iy, ix] = np.trapz(b_squared[iy, ix, :], field3d.z)
 
-        y_int[ix] = np.trapz(z_int[:, ix], field3d.y)
+    #     y_int[ix] = np.trapz(z_int[:, ix], field3d.y)
 
+    # x_int = np.trapz(y_int, field3d.x)
+
+    b_squared = np.sum(field3d.field**2, axis=-1)
+
+    z_int = np.trapz(b_squared, field3d.z, axis=-1)
+    y_int = np.trapz(z_int, field3d.y, axis=0)
     x_int = np.trapz(y_int, field3d.x)
 
-    return x_int / (8.0 * np.pi)
+    return x_int / (2.0 * MU0)

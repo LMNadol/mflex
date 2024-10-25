@@ -164,6 +164,8 @@ def plot(
             + "_"
             + str(data.b)
             + "_"
+            + str(data.deltaz)
+            + "_"
             + view
             + ".png"
         )
