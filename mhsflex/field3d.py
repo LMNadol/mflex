@@ -498,30 +498,32 @@ def fdensity_linear(
 def j3d(field3d: Field3dData) -> np.ndarray:
     """
     Returns current density, calucated from magnetic field as j = (alpha B + curl(0,0,f(z)Bz))/ mu0.
+    In A/m^2.
     """
 
     j = np.zeros_like(field3d.field)
 
-    j[:, :, :, 2] = field3d.alpha * L * field3d.field[:, :, :, 2] * 10**-4
+    j[:, :, :, 2] = field3d.alpha * field3d.field[:, :, :, 2] * 10**-4
 
     f_matrix = np.zeros_like(field3d.dfield[:, :, :, 0])
     f_matrix[:, :, :] = f(field3d.z, field3d.z0, field3d.deltaz, field3d.a, field3d.b)
 
     j[:, :, :, 1] = (
-        field3d.alpha * L * field3d.field[:, :, :, 1] * 10**-4
+        field3d.alpha * field3d.field[:, :, :, 1] * 10**-4
         + f_matrix * field3d.dfield[:, :, :, 0] * 10**-4
     )
 
     j[:, :, :, 0] = (
-        field3d.alpha * L * field3d.field[:, :, :, 0] * 10**-4
+        field3d.alpha * field3d.field[:, :, :, 0] * 10**-4
         - f_matrix * field3d.dfield[:, :, :, 1] * 10**-4
     )
-    return j / MU0
+    return j / MU0 * L
 
 
 def lf3d(field3d: Field3dData) -> np.ndarray:
     """
     Returns Lorentz force calculated from j x B.
+    In kg/sm^2.
     """
 
     j = field3d.j3D
